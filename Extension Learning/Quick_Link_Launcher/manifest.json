@@ -1,0 +1,14 @@
+{
+    "manifest_version": 3,
+    "name": "Quick Link Launcher",
+    "description": "Quick Link Launcher can speed up the building of Chrome extensions.",
+    "version": "1.0.0",
+    "permissions": ["storage", "tabs"],
+    "omnibox" : {
+        "keyword" : "fav"
+    },
+    "background": {
+        "service_worker": "service-worker.js",
+        "type": "module"
+    }
+}

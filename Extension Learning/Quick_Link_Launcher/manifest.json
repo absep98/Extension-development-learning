@@ -1,14 +1,18 @@
 {
-    "manifest_version": 3,
-    "name": "Quick Link Launcher",
-    "description": "Quick Link Launcher can speed up the building of Chrome extensions.",
-    "version": "1.0.0",
-    "permissions": ["storage", "tabs"],
-    "omnibox" : {
-        "keyword" : "fav"
-    },
-    "background": {
-        "service_worker": "service-worker.js",
-        "type": "module"
-    }
+  "manifest_version": 3,
+  "name": "Quick Link Launcher",
+  "description": "Quick Link Launcher helps manage and open favorite links quickly.",
+  "version": "1.0.0",
+  "permissions": ["storage", "tabs"],
+  "options_page": "options.html",
+  "omnibox": {
+    "keyword": "fav"
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Quick Link Launcher"
+  }
 }

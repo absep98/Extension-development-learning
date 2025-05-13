@@ -1,13 +1,16 @@
 chrome.omnibox.onInputChanged.addListener((text, suggest) => {
-    console.log(`User typed: ${text}`);
-    suggest([
-        { content: "example1", description: "Example suggestion 1" },
-        { content: "example2", description: "Example suggestion 2" }
-    ]);
+  chrome.storage.local.get({ links: [] }, (data) => {
+    const suggestions = data.links
+      .filter(link => link.name.toLowerCase().includes(text.toLowerCase()))
+      .map(link => ({
+        content: link.url,
+        description: `Open ${link.name} → ${link.url}`
+      }));
+    suggest(suggestions);
+  });
 });
 
 chrome.omnibox.onInputEntered.addListener((text) => {
-    console.log(`User selected: ${text}`);
-    // Perform an action, such as opening a URL
-    chrome.tabs.create({ url: `https://www.google.com/search?q=${text}` });
+  const url = text.startsWith("http") ? text : `https://${text}`;
+  chrome.tabs.create({ url });
 });

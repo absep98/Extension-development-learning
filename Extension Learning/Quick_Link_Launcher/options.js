@@ -42,8 +42,17 @@ function displayLinks() {
       listItem.innerHTML = `
         <span class="link_name">${linkObj.name} → ${linkObj.url}</span>
         <button class="delete_link" data-url="${linkObj.url}">Remove</button>
+        <button class="edit_link" data-url="${linkObj.url}">Edit</button>
       `;
       linkList.appendChild(listItem);
+    });
+    // Attach edit listeners
+
+    document.querySelectorAll(".edit_link").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const url = e.target.dataset.url;
+        editLink(url);
+      });
     });
 
     // Attach remove listeners
@@ -52,6 +61,23 @@ function displayLinks() {
         const url = e.target.dataset.url;
         removeLink(url);
       });
+    });
+  });
+}
+
+function editLink(urlToEdit) {
+  chrome.storage.local.get({ links: [] }, (data) => {
+    const links = data.links
+    const linkToEdit = links.find(link => link.url === urlToEdit);
+    if(!editLink) return;
+
+    nameField.value = linkToEdit.name;
+    urlField.value = linkToEdit.url;
+
+    const updatedLinks = links.filter(link => link.url !== urlToEdit);
+    chrome.storage.local.set({ links : updatedLinks }, () => {
+      displayLinks();
+      updateBadgeCount(updatedLinks.length);
     });
   });
 }

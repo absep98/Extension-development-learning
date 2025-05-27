@@ -1,0 +1,18 @@
+{
+    "manifest_version": 3,
+    "description": "A simple tab manager extension",
+    "name": "Smart Tab Manager",
+    "version": "1.0.0",
+    "permissions": [
+        "bookmarks",
+        "storage",
+        "tabs"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16" : "icon16.png"
+        },
+        "default_title": "Smart Tab Manager"
+    }
+}

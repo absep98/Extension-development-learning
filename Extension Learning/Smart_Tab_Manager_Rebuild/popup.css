@@ -1,0 +1,11 @@
+body{
+    width: 300px;
+    font-family: sans-serif;
+    padding: 10px;
+    background-color: antiquewhite;
+}
+
+li {
+    margin-bottom: 10px;
+    list-style: none;
+}

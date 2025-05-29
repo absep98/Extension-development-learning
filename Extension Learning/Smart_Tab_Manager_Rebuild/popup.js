@@ -51,13 +51,37 @@ document.addEventListener("DOMContentLoaded", () => {
             favorites.forEach((fav) => {
                 const li = document.createElement("li");
                 li.style.cursor = "pointer";
+                li.style.display = "flex";
+                li.style.alignContent = "center";
+                li.style.gap = "5px";
+                li.style.padding = "4px 0";
+                li.style.justifyContent = "space-content";
                 li.innerHTML = `
-                    ${fav.favIconUrl ? `<img src="${fav.favIconUrl}" width="16" height="16">` : ""}
-                    <span style="font-size: 13px; color: green;">${fav.url}</span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+                        ${fav.favIconUrl ? `<img src="${fav.favIconUrl}" width="16" height="16">` : ""}
+                        <span style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: green;">${fav.url}</span>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="open-fav-btn" data-url="${fav.url}">🔗</button>
+                        <button class="remove-fav-btn" data-url="${fav.url}">🗑️</button>
+                    </div>
                 `;
                 li.addEventListener("click", () => {
                     chrome.tabs.create({ url : fav.url });
                 });
+
+                li.querySelector(".open-fav-btn").addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    chrome.tabs.create({ url : event.target.dataset.url });
+                })
+
+                li.querySelector(".remove-fav-btn").addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    const urlToRemove = event.target.dataset.url;
+                    const updated = favorites.filter(item => item.url !== urlToRemove);
+                    chrome.storage.local.set({ favorites : updated }, () => renderFavorites())
+                })
+
                 favoriteList.appendChild(li);
             })
         })
@@ -106,13 +130,26 @@ document.addEventListener("DOMContentLoaded", () => {
         tabList.innerHTML = "";
         tabsToRender.forEach((tab) => {
             const li = document.createElement('li');
-            li.style.cursor = 'pointer';
+            li.style.cursor = "pointer";
+            li.style.display = "flex";
+            li.style.alignItems = "center";
+            li.style.justifyContent = "space-between";
+            li.style.gap = "10px";
+            li.style.marginBottom = "5px";
             li.innerHTML = `
-                ${tab.favIconUrl ? `<img src="${tab.favIconUrl}" alt="favicon" width="16" height="16">` : ""}
-                <span style="font-size : 13px; color: blue; text-decoration : underline">${tab.title}</span>
-                <button style="margin-left: 10px;" class="close-btn" data-id="${tab.id}">❌</button>
-                <button style="margin-left: 10px;" class="pin-btn" data-id="${tab.id}">${tab.pinned ? "📍" : "📌"}</button>
-                <button style="margin-left: 10px;" class="bookmark-btn" data-id="${tab.id}">⭐</button>
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+                    ${tab.favIconUrl ? `<img src="${tab.favIconUrl}" alt="favicon" 
+                        style="width: 16px; height: 16px; object-fit: contain; flex-shrink: 0;" />` : ""}
+                    <span style="font-size: 13px; color: blue; text-decoration: underline; 
+                                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
+                        ${tab.title}
+                    </span>
+                </div>
+                <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                    <button class="close-btn" data-id="${tab.id}">❌</button>
+                    <button class="pin-btn" data-id="${tab.id}">${tab.pinned ? "📍" : "📌"}</button>
+                    <button class="bookmark-btn" data-id="${tab.id}">⭐</button>
+                </div>
             `;
 
             li.querySelector(".close-btn").addEventListener("click", (event) => {

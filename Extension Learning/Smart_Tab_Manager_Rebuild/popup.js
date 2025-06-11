@@ -1,5 +1,4 @@
 let allTabs = [];
-let bookmarkedTabs = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     const tabList = document.getElementById('tabList');
@@ -7,13 +6,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const favoriteList = document.getElementById('favoriteList');
     const storeFavoritesBtn = document.getElementById('storeFavoritesBtn');
 
-    chrome.tabs.query({}, (tabs) => {   // first argument {} means to get all open tabs and second args is callback function that runs after the tabs are fetched.
-        refreshTabs();
-    });
+    refreshTabs();
+
 
     function refreshTabs() {
         chrome.bookmarks.search({ title: "Smart Tab Bookmarks" }, (results) => {
-            if(results.length === 0){
+            if (results.length === 0) {
                 chrome.storage.local.set({ favorites: [] }, () => {
                     allTabs = [];
                     chrome.tabs.query({}, (tabs) => {
@@ -23,13 +21,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 });
             } else {
-                chrome.tabs.query({}, (tabs) => {
-                    allTabs = tabs;
+                if (allTabs.length > 0) {
                     renderTabs(allTabs);
                     renderFavorites();
-                })
+                } else {
+                    chrome.tabs.query({}, (tabs) => {
+                        allTabs = tabs;
+                        renderTabs(allTabs);
+                        renderFavorites();
+                    });
+                }
             }
-        })
+        });
     }
 
     function storeBookmarkedTabs(folderId) {
@@ -42,6 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     children.forEach((child) => {
                         if (!existingUrls.has(child.url)) {
                             const matchingTab = tabs.find(tab => tab.url === child.url);
+                            if(!matchingTab) {
+                                return;
+                            }
                             existingFavorites.push({
                                 title: child.title,
                                 url: child.url,
@@ -59,14 +65,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderFavorites() {
         favoriteList.innerHTML = "";
-        chrome.storage.local.get(["favorites"], (result) => {
-            const favorites = result.favorites || [];
+        chrome.storage.local.get(null, (allStoredItems) => {
+            const favorites = allStoredItems.favorites || [];
 
             favorites.sort((a, b) => {
-                const timeA = parseInt(localStorage.getItem(`fav_click_${a.url}`)) || 0;
-                const timeB = parseInt(localStorage.getItem(`fav_click_${b.url}`)) || 0;
+                const timeA = parseInt(allStoredItems[`fav_click_${a.url}`]) || 0;
+                const timeB = parseInt(allStoredItems[`fav_click_${b.url}`]) || 0;
                 return timeB - timeA;
-            })
+            });
 
             favorites.forEach((fav) => {
                 const li = document.createElement("li");
@@ -95,9 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const url = event.target.dataset.url;
 
                     const key = `fav_click_${url}`;
-                    const current = localStorage.getItem(key);
-
-                    localStorage.setItem(key, Date.now());
+                    chrome.storage.local.set({ [key]: Date.now() });
                     chrome.tabs.create({  url });
                 })
 
@@ -116,7 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
     storeFavoritesBtn.addEventListener("click", () => {
         const folderTitle = "Smart Tab Bookmarks";
         chrome.bookmarks.search({ title: folderTitle }, (results) => {
-            const folder = results.find(r => !r.url);            if (folder) {
+            const folder = results.find(r => !r.url);           
+            if (folder) {
                 storeBookmarkedTabs(folder.id);
             } else {
                 alert("No Smart Tab Bookmarks folder found!!");
@@ -156,13 +161,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    let debounceTimer;
     searchInput.addEventListener("input", (event) => {
-        const searchTerm = event.target.value.toLowerCase();
-        const filtered = allTabs.filter((tab) => {
-            return tab.title.toLowerCase().includes(searchTerm) || tab.url.toLowerCase().includes(searchTerm);
-        });
-        renderTabs(filtered);
-    })
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const searchTerm = event.target.value.toLowerCase();
+            const filtered = allTabs.filter(tab =>
+                tab.title.toLowerCase().includes(searchTerm) ||
+                tab.url.toLowerCase().includes(searchTerm)
+            );
+            renderTabs(filtered);
+        }, 200); // 200ms debounce
+    });
+
 
     function renderTabs(tabsToRender) {
         chrome.storage.local.get(["favorites"], (result) => {
@@ -205,7 +216,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 li.querySelector(".close-btn").addEventListener("click", (event) => {
                     event.stopPropagation();
                     const tabId = parseInt(event.target.dataset.id);
-                    chrome.tabs.remove(tabId, refreshTabs);
+                    chrome.tabs.remove(tabId, () => {
+                        allTabs = allTabs.filter(t => t.id !== tabId);
+                        renderTabs(allTabs);
+                    });
                 });
 
                 li.querySelector(".pin-btn").addEventListener("click", (event) => {
@@ -213,14 +227,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     const tabId = parseInt(event.target.dataset.id);
                     const tab = tabsToRender.find(t => t.id == tabId);
                     if (!tab) {
-                        alert("No Smart Tab Bookmarks folder found!!")
+                        alert("Tab not found or might have been closed.");
                         return;
                     }
                     chrome.tabs.update(tabId, { pinned: !tab.pinned }, () => {
+   
                         chrome.tabs.query({}, (tabs) => {
                             allTabs = tabs;
                             renderTabs(allTabs);
                         });
+                        
                     });
                 });
 
@@ -229,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const tabId = parseInt(event.target.dataset.id);
                     const tab = tabsToRender.find(t => t.id == tabId);
                     if(!tab){
-                        alert("No Smart Tab Bookmarks folder found!!")
+                        alert("Tab not found or might have been closed.");
                         return;
                     }
                     const folderTitle = "Smart Tab Bookmarks";

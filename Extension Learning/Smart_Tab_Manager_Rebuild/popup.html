@@ -9,10 +9,46 @@
     <h2>Open Tabs</h2>
     <input type="text" id="searchInput" placeholder="Search your tabs...">
 
+    <!-- Add Tab Groups Management Section Here -->
+    <div id="groupManagement">
+        <h3>📊 Tab Groups</h3>
+        <div class="group-controls" style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <input 
+                type="text" 
+                id="groupNameInput" 
+                placeholder="Group name"
+                style="flex: 1; padding: 4px;"
+            >
+            <select 
+                id="groupColorSelect"
+                style="padding: 4px;"
+            >
+                <option value="grey">Grey</option>
+                <option value="blue">Blue</option>
+                <option value="red">Red</option>
+                <option value="yellow">Yellow</option>
+                <option value="green">Green</option>
+                <option value="pink">Pink</option>
+                <option value="purple">Purple</option>
+                <option value="cyan">Cyan</option>
+            </select>
+        </div>
+        <div class="group-actions" style="display: flex; gap: 8px; margin-bottom: 15px;">
+            <button 
+                id="createGroupBtn"
+                style="flex: 1; padding: 6px; cursor: pointer;"
+            >Create Group</button>
+            <button 
+                id="autoGroupBtn"
+                style="flex: 1; padding: 6px; cursor: pointer;"
+            >Auto Group by Domain</button>
+        </div>
+        <ul id="groupsList" style="list-style: none; padding: 0; margin: 0;"></ul>
+    </div>
+
     <h3>⭐ Favorite Tabs</h3>
     <button id="storeFavoritesBtn">🔄 Sync Favorites</button>
     <ul id="favoriteList"></ul>
-
 
     <h3>📂 All Tabs</h3>
     <ul id="tabList"></ul>

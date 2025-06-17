@@ -1,4 +1,3 @@
-
 let allTabs = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -6,19 +5,87 @@ document.addEventListener("DOMContentLoaded", () => {
     const searchInput = document.getElementById('searchInput');
     const favoriteList = document.getElementById('favoriteList');
     const storeFavoritesBtn = document.getElementById('storeFavoritesBtn');
-    console.log("searchInput is: ", searchInput);
-    if (!searchInput) {
-        console.error("❌ searchInput element not found in DOM");
-    }
 
     refreshTabs();
+    renderFavorites();
 
+    storeFavoritesBtn.addEventListener("click", async () => {
+        const folderTitle = "Smart Tab Bookmarks";
+        chrome.bookmarks.search({ title: folderTitle }, async (results) => {
+            const folder = results.find(r => !r.url);
+            if (folder) {
+                refreshFavoritesWithRender();         // ✅ then render
+            } else {
+                alert("No Smart Tab Bookmarks folder found!!");
+            }
+        });
+    });
+
+    
+    function storeBookmarkedTabs(folderId) {
+        return new Promise((resolve) => {
+            chrome.tabs.query({}, (tabs) => {
+                tabs.forEach((tab, index) => {
+                    chrome.bookmarks.create({
+                        parentId: folderId,
+                        title: tab.title,
+                        url: tab.url
+                    }, () => {
+                        if (index === tabs.length - 1) {
+                            resolve(); // ✅ when last tab is bookmarked
+                        }
+                    });
+                });
+
+                // If there are no tabs, resolve immediately
+                if (tabs.length === 0) resolve();
+            });
+        });
+    }
+
+
+    function refreshFavoritesWithRender() {
+        const folderTitle = "Smart Tab Bookmarks";
+        chrome.bookmarks.search({ title: folderTitle }, (results) => {
+            const folder = results.find(r => !r.url);
+            if (!folder) return;
+
+            chrome.bookmarks.getChildren(folder.id, (children) => {
+                const synced = children.map(b => ({ title: b.title, url: b.url }));
+
+                chrome.storage.local.get("favorites", (data) => {
+                    const existing = data.favorites || [];
+                    const existingUrls = new Set(existing.map(f => f.url));
+
+                    const merged = [...existing, ...synced.filter(b => !existingUrls.has(b.url))];
+
+                    chrome.storage.local.set({ favorites: merged }, () => {
+                        // ✅ Ensure render is called right after storage update
+                        renderFavorites();
+                    });
+                });
+            });
+        });
+    }
+
+
+    let debounceTimer;
+    searchInput.addEventListener("input", (event) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const searchTerm = event.target.value.toLowerCase();
+            const filtered = allTabs.filter(tab =>
+                tab.title.toLowerCase().includes(searchTerm) ||
+                tab.url.toLowerCase().includes(searchTerm)
+            );
+            renderTabs(filtered);
+        }, 200);
+    });
 
     function refreshTabs() {
         chrome.bookmarks.search({ title: "Smart Tab Bookmarks" }, (results) => {
             if (results.length === 0) {
                 chrome.storage.local.set({ favorites: [] }, () => {
-                    allTabs = [];
                     chrome.tabs.query({}, (tabs) => {
                         allTabs = tabs;
                         renderTabs(allTabs);
@@ -26,66 +93,57 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 });
             } else {
-                if (allTabs.length > 0) {
+                chrome.tabs.query({}, (tabs) => {
+                    allTabs = tabs;
                     renderTabs(allTabs);
                     renderFavorites();
-                } else {
-                    chrome.tabs.query({}, (tabs) => {
-                        allTabs = tabs;
-                        renderTabs(allTabs);
-                        renderFavorites();
-                    });
-                }
+                });
             }
         });
     }
 
-    storeBookmarkedTabs(folderId);
-
-    renderFavorites();
-
-    storeFavoritesBtn.addEventListener("click", () => {
+    function refreshFavorites() {
         const folderTitle = "Smart Tab Bookmarks";
         chrome.bookmarks.search({ title: folderTitle }, (results) => {
-            const folder = results.find(r => !r.url);           
-            if (folder) {
-                storeBookmarkedTabs(folder.id);
-            } else {
-                alert("No Smart Tab Bookmarks folder found!!");
+            const folder = results.find(r => !r.url);
+            if (!folder) {
+                console.warn("📁 Smart Tab Bookmarks folder not found.");
+                return;
             }
+
+            chrome.bookmarks.getChildren(folder.id, (children) => {
+                const syncedBookmarks = children.map(b => ({ title: b.title, url: b.url }));
+
+                // ✅ Get existing local favorites
+                chrome.storage.local.get("favorites", (data) => {
+                    const existingFavorites = data.favorites || [];
+
+                    // ✅ Create a Set of URLs from existing
+                    const existingUrls = new Set(existingFavorites.map(f => f.url));
+
+                    // ✅ Filter out duplicates
+                    const newOnes = syncedBookmarks.filter(b => !existingUrls.has(b.url));
+
+                    // ✅ Merge and save updated favorites
+                    const updatedFavorites = [...existingFavorites, ...newOnes];
+
+                    chrome.storage.local.set({ favorites: updatedFavorites }, () => {
+                        renderFavorites();
+                    });
+                });
+            });
         });
-    })
-
-    window.saveIfNotDuplicate(folderId, tab);
-
-    let debounceTimer;
-    searchInput.addEventListener("input", (event) => {
-        console.log("Search event fired");
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            const searchTerm = event.target.value.toLowerCase();
-            console.log("current allTabs : ", allTabs);
-            const filtered = allTabs.filter(tab =>
-                tab.title.toLowerCase().includes(searchTerm) ||
-                tab.url.toLowerCase().includes(searchTerm)
-            );
-            renderTabs(filtered);
-        }, 200); // 200ms debounce
-    });
+    }
 
 
     function renderTabs(tabsToRender) {
         chrome.storage.local.get(["favorites"], (result) => {
             const favUrls = new Set((result.favorites || []).map(item => item.url));
-
             tabList.innerHTML = "";
 
             const groupedTabs = groupTabsByDomain(tabsToRender);
-            console.log("Tabs to render:", tabsToRender);
-            console.log("Grouped tabs:", groupedTabs);
 
             for (const [domain, domainTabs] of Object.entries(groupedTabs)) {
-                
                 const domainHeader = document.createElement("div");
                 domainHeader.textContent = domain;
                 domainHeader.style.fontWeight = "bold";
@@ -95,7 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 tabList.appendChild(domainHeader);
 
                 domainTabs.forEach((tab) => {
-
                     const isFavorited = favUrls.has(tab.url);
 
                     const li = document.createElement('li');
@@ -127,6 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         bookmarBtn.innerText = "✅";
                         bookmarBtn.title = "Already bookmarked";
                     }
+
                     li.querySelector(".close-btn").addEventListener("click", (event) => {
                         event.stopPropagation();
                         const tabId = parseInt(event.target.dataset.id);
@@ -137,7 +195,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
 
                     li.querySelector(".pin-btn").addEventListener("click", (event) => {
-                        
                         event.stopPropagation();
                         const tabId = parseInt(event.target.dataset.id);
                         const tab = tabsToRender.find(t => t.id == tabId);
@@ -146,12 +203,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             return;
                         }
                         chrome.tabs.update(tabId, { pinned: !tab.pinned }, () => {
-    
                             chrome.tabs.query({}, (tabs) => {
                                 allTabs = tabs;
                                 renderTabs(allTabs);
                             });
-                            
                         });
                     });
 
@@ -159,18 +214,20 @@ document.addEventListener("DOMContentLoaded", () => {
                         event.stopPropagation();
                         const tabId = parseInt(event.target.dataset.id);
                         const tab = tabsToRender.find(t => t.id == tabId);
-                        if(!tab){
+                        if (!tab) {
                             alert("Tab not found or might have been closed.");
                             return;
                         }
                         const folderTitle = "Smart Tab Bookmarks";
                         chrome.bookmarks.search({ title: folderTitle }, (results) => {
-                            const folder = results.find(r => !r.url); // Only folders have no url
+                            const folder = results.find(r => !r.url);
                             if (folder) {
                                 saveIfNotDuplicate(folder.id, tab);
+                                refreshFavorites(); // update list after bookmark
                             } else {
                                 chrome.bookmarks.create({ title: folderTitle }, (newFolder) => {
                                     saveIfNotDuplicate(newFolder.id, tab);
+                                    refreshFavorites();
                                 });
                             }
                         });
@@ -182,11 +239,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
 
                     tabList.appendChild(li);
-
-                })
-
-                
-            };
-        })
+                });
+            }
+        });
     }
 });

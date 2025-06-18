@@ -1,3 +1,9 @@
+import { groupTabsByDomain } from './utils/grouping.js';
+import { saveIfNotDuplicate } from './utils/bookmarks.js';
+import { renderFavorites } from './utils/renderFavorites.js';
+import { clearSmartTabFavorites } from './utils/clearFavorites.js';
+// import { storeBookmarkedTabs } from './utils/storeBookmarkedTabs.js';
+
 let allTabs = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -5,6 +11,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const searchInput = document.getElementById('searchInput');
     const favoriteList = document.getElementById('favoriteList');
     const storeFavoritesBtn = document.getElementById('storeFavoritesBtn');
+    const sortSelect = document.getElementById("sortFavorites");
+
+    
+    sortSelect.addEventListener("change", renderFavorites);
+
+    document.getElementById("clearFavoritesBtn").addEventListener("click", () => {
+        clearSmartTabFavorites().then(() => {
+            renderFavorites();
+            alert("Favorites cleared!");
+        });
+    });
+
+
+    sortSelect.addEventListener("change", () => {
+        const selected = sortSelect.value;
+        chrome.storage.local.set({ favoriteSortOption: selected }, () => {
+            renderFavorites(); // Re-render using new sort
+        });
+    });
+
+    // On load: set dropdown to saved sort
+    chrome.storage.local.get("favoriteSortOption", (data) => {
+        sortSelect.value = data.favoriteSortOption || "recent";
+    });
+
 
     refreshTabs();
     renderFavorites();
@@ -14,59 +45,12 @@ document.addEventListener("DOMContentLoaded", () => {
         chrome.bookmarks.search({ title: folderTitle }, async (results) => {
             const folder = results.find(r => !r.url);
             if (folder) {
-                refreshFavoritesWithRender();         // ✅ then render
+                syncFavoritesFromBookmarks({ shouldRender: true });         // ✅ then render
             } else {
                 alert("No Smart Tab Bookmarks folder found!!");
             }
         });
     });
-
-    
-    function storeBookmarkedTabs(folderId) {
-        return new Promise((resolve) => {
-            chrome.tabs.query({}, (tabs) => {
-                tabs.forEach((tab, index) => {
-                    chrome.bookmarks.create({
-                        parentId: folderId,
-                        title: tab.title,
-                        url: tab.url
-                    }, () => {
-                        if (index === tabs.length - 1) {
-                            resolve(); // ✅ when last tab is bookmarked
-                        }
-                    });
-                });
-
-                // If there are no tabs, resolve immediately
-                if (tabs.length === 0) resolve();
-            });
-        });
-    }
-
-
-    function refreshFavoritesWithRender() {
-        const folderTitle = "Smart Tab Bookmarks";
-        chrome.bookmarks.search({ title: folderTitle }, (results) => {
-            const folder = results.find(r => !r.url);
-            if (!folder) return;
-
-            chrome.bookmarks.getChildren(folder.id, (children) => {
-                const synced = children.map(b => ({ title: b.title, url: b.url }));
-
-                chrome.storage.local.get("favorites", (data) => {
-                    const existing = data.favorites || [];
-                    const existingUrls = new Set(existing.map(f => f.url));
-
-                    const merged = [...existing, ...synced.filter(b => !existingUrls.has(b.url))];
-
-                    chrome.storage.local.set({ favorites: merged }, () => {
-                        // ✅ Ensure render is called right after storage update
-                        renderFavorites();
-                    });
-                });
-            });
-        });
-    }
 
 
     let debounceTimer;
@@ -102,38 +86,29 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function refreshFavorites() {
+    function syncFavoritesFromBookmarks({ shouldRender = true } = {}) {
         const folderTitle = "Smart Tab Bookmarks";
         chrome.bookmarks.search({ title: folderTitle }, (results) => {
             const folder = results.find(r => !r.url);
-            if (!folder) {
-                console.warn("📁 Smart Tab Bookmarks folder not found.");
-                return;
-            }
+            if (!folder) return;
 
             chrome.bookmarks.getChildren(folder.id, (children) => {
-                const syncedBookmarks = children.map(b => ({ title: b.title, url: b.url }));
+                const synced = children.map(b => ({ title: b.title, url: b.url }));
 
-                // ✅ Get existing local favorites
                 chrome.storage.local.get("favorites", (data) => {
-                    const existingFavorites = data.favorites || [];
+                    const existing = data.favorites || [];
+                    const existingUrls = new Set(existing.map(f => f.url));
 
-                    // ✅ Create a Set of URLs from existing
-                    const existingUrls = new Set(existingFavorites.map(f => f.url));
+                    const merged = [...existing, ...synced.filter(b => !existingUrls.has(b.url))];
 
-                    // ✅ Filter out duplicates
-                    const newOnes = syncedBookmarks.filter(b => !existingUrls.has(b.url));
-
-                    // ✅ Merge and save updated favorites
-                    const updatedFavorites = [...existingFavorites, ...newOnes];
-
-                    chrome.storage.local.set({ favorites: updatedFavorites }, () => {
-                        renderFavorites();
+                    chrome.storage.local.set({ favorites: merged }, () => {
+                        if (shouldRender) renderFavorites();
                     });
                 });
             });
         });
     }
+
 
 
     function renderTabs(tabsToRender) {
@@ -183,6 +158,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         bookmarBtn.disabled = true;
                         bookmarBtn.innerText = "✅";
                         bookmarBtn.title = "Already bookmarked";
+                        bookmarBtn.style.opacity = 0.6;
+                        bookmarBtn.style.pointerEvents = "none";
                     }
 
                     li.querySelector(".close-btn").addEventListener("click", (event) => {
@@ -223,11 +200,11 @@ document.addEventListener("DOMContentLoaded", () => {
                             const folder = results.find(r => !r.url);
                             if (folder) {
                                 saveIfNotDuplicate(folder.id, tab);
-                                refreshFavorites(); // update list after bookmark
+                                syncFavoritesFromBookmarks(); // update list after bookmark
                             } else {
                                 chrome.bookmarks.create({ title: folderTitle }, (newFolder) => {
                                     saveIfNotDuplicate(newFolder.id, tab);
-                                    refreshFavorites();
+                                    syncFavoritesFromBookmarks();
                                 });
                             }
                         });

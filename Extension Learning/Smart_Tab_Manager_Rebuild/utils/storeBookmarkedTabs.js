@@ -1,4 +1,4 @@
-function storeBookmarkedTabs(folderId) {
+export function storeBookmarkedTabs(folderId) {
     chrome.bookmarks.getChildren(folderId, (children) => {
         chrome.storage.local.get(["favorites"], (result) => {
             const existingFavorites = result.favorites || [];
@@ -25,5 +25,3 @@ function storeBookmarkedTabs(folderId) {
         })
     })
 }
-
-window.storeBookmarkedTabs = storeBookmarkedTabs;

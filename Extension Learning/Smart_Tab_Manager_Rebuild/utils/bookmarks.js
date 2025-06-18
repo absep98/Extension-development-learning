@@ -1,4 +1,4 @@
-function saveIfNotDuplicate(folderId, tab) {
+export function saveIfNotDuplicate(folderId, tab) {
     chrome.bookmarks.getChildren(folderId, (children) => {
         const isAlreadyBookmarked = children.some(child => child.url === tab.url);
         if (isAlreadyBookmarked) {
@@ -27,5 +27,3 @@ function saveIfNotDuplicate(folderId, tab) {
         });
     });
 }
-
-window.saveIfNotDuplicate = saveIfNotDuplicate;

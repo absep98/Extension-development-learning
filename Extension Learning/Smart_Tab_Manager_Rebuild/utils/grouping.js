@@ -1,6 +1,6 @@
 // grouping.js
 
-function groupTabsByDomain(tabs) {
+export function groupTabsByDomain(tabs) {
     const grouped = {};
     tabs.forEach((tab) => {
         try {
@@ -18,6 +18,3 @@ function groupTabsByDomain(tabs) {
     });
     return grouped;
 }
-
-// Make the function available globally
-window.groupTabsByDomain = groupTabsByDomain;

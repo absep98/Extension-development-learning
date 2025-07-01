@@ -3,12 +3,9 @@ export function renderFavorites() {
 
     chrome.storage.local.get(null, (allStoredItems) => {
         let favorites = allStoredItems.favorites || [];
-
-        const sortTypeSelect = document.getElementById("sortFavorites");
-        const sortType = sortTypeSelect ? sortTypeSelect.value : "recent";
+        const sortType = allStoredItems.favoriteSortOption || "recent";
 
         if (sortType === "domain") {
-            // Count domain frequency
             const domainCounts = {};
             favorites.forEach(fav => {
                 try {
@@ -24,16 +21,9 @@ export function renderFavorites() {
                 const domainB = new URL(b.url).hostname;
                 const countA = domainCounts[domainA] || 0;
                 const countB = domainCounts[domainB] || 0;
-
-                // Descending by frequency, fallback by title
-                if (countB !== countA) {
-                    return countB - countA;
-                } else {
-                    return a.title.localeCompare(b.title);
-                }
+                return countB - countA || a.title.localeCompare(b.title);
             });
         } else {
-            // Default: Sort by recent clicks/bookmarks
             favorites.sort((a, b) => {
                 const timeA = parseInt(allStoredItems[`fav_click_${a.url}`]) || 0;
                 const timeB = parseInt(allStoredItems[`fav_click_${b.url}`]) || 0;

@@ -13,9 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const storeFavoritesBtn = document.getElementById('storeFavoritesBtn');
     const sortSelect = document.getElementById("sortFavorites");
 
-    
-    sortSelect.addEventListener("change", renderFavorites);
-
     document.getElementById("clearFavoritesBtn").addEventListener("click", () => {
         clearSmartTabFavorites().then(() => {
             renderFavorites();

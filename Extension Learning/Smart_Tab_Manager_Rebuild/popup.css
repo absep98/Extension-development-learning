@@ -3,6 +3,7 @@ body{
     font-family: sans-serif;
     padding: 10px;
     background-color: antiquewhite;
+    color: #222;
 }
 
 li {
@@ -48,4 +49,9 @@ li {
 .sorting-controls select:focus {
     border-color: #0078d7;
     outline: none;
+}
+
+button:hover {
+    background-color: #eee;
+    cursor: pointer;
 }

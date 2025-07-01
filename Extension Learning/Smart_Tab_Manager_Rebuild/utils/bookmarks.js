@@ -17,13 +17,18 @@ export function saveIfNotDuplicate(folderId, tab) {
                     url: tab.url,
                     favIconUrl: tab.favIconUrl || ""
                 });
-                chrome.storage.local.set({ favorites}, () => {
-                    alert("Tab bookmarked successfully...");
-                    renderTabs(allTabs);
-                    renderFavorites();
-                    // refreshTabs();
-                })
-            })
+
+                // ✅ Save the timestamp for sorting
+                const timestampKey = `fav_click_${tab.url}`;
+                    chrome.storage.local.set({
+                    favorites,
+                    [timestampKey]: Date.now()   // <-- ✅ this is what enables recent sorting to work right away
+                }, () => {
+                alert("Tab bookmarked successfully...");
+                renderTabs(allTabs);
+                renderFavorites();
+                });
+            });
         });
     });
 }

@@ -15,5 +15,10 @@
             "16" : "icon16.png"
         },
         "default_title": "Smart Tab Manager"
-    }
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "host_permissions": ["<all_urls>"],
+    "options_page": "analytics.html"
 }

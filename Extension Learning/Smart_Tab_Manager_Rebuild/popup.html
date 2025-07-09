@@ -15,16 +15,21 @@
         <button id="clearFavoritesBtn">🗑️ Clear All Favorites</button>
     </div>
     <div style="margin-bottom: 10px;">
-    <div class="sorting-controls">
-        <label for="sortFavorites"><span class="sort-icon">⇅</span> Sort Favorites:</label>
-        <select id="sortFavorites">
-            <option value="recent">Recently Bookmarked</option>
-            <option value="domain">By Domain Frequency</option>
-        </select>
+        <div class="sorting-controls">
+            <label for="sortFavorites"><span class="sort-icon">⇅</span> Sort Favorites:</label>
+            <select id="sortFavorites">
+                <option value="recent">Recently Bookmarked</option>
+                <option value="domain">By Domain Frequency</option>
+            </select>
+        </div>
     </div>
-
-
+    <div style="margin-bottom: 14px;">
+        <button id="openAnalyticsBtn" style="width: 100%; padding: 8px; background-color: #0078d7; color: white; border: none; border-radius: 5px;" aria-label="View tab usage analytics">
+            📈 View Analytics
+        </button>
+    </div>
     <ul id="favoriteList"></ul>
+
 
 
     <h3>📂 All Tabs</h3>

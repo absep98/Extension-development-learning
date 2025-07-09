@@ -28,6 +28,13 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    const analyticsBtn = document.getElementById("openAnalyticsBtn");
+    if (analyticsBtn) {
+        analyticsBtn.addEventListener("click", () => {
+            chrome.runtime.openOptionsPage();
+        });
+    }
+
     // On load: set dropdown to saved sort
     chrome.storage.local.get("favoriteSortOption", (data) => {
         sortSelect.value = data.favoriteSortOption || "recent";

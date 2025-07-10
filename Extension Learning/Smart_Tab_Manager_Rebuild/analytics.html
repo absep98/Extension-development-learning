@@ -9,18 +9,41 @@
         body {
             font-family: sans-serif;
             margin: 20px;
+            background: #fffaf5;
         }
+
+        h2, h3 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .chart-container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
         canvas {
-            max-width: 100%;
-            margin-bottom: 30px;
+            width: 100% !important;
+            max-height: 300px;
+            margin-bottom: 20px;
         }
+
     </style>
 </head>
 <body>
     <h2>📊 Tab Usage Analytics</h2>
-    <canvas id="domainChart" width="400" height="200"></canvas>
-    <canvas id="durationChart" width="400" height="200"></canvas>
+    <div class="chart-container">
+        <h3>🧭 Time Spent per Domain (Bar)</h3>
+        <canvas id="domainChart"></canvas>
 
+        <h3>🏆 Top 5 Domains (Pie)</h3>
+        <canvas id="topSitesChart"></canvas>
+        
+    </div>
     <!-- Add more charts later -->
 </body>
 </html>

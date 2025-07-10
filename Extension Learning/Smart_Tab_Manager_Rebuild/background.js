@@ -1,45 +1,54 @@
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.set({ tabAnalytics: [] });
-});
-
-// 1. When tab is created, store a placeholder entry
-chrome.tabs.onCreated.addListener((tab) => {
-  const entry = {
-    id: tab.id,
-    url: "", // will be updated later
-    openedAt: Date.now()
-  };
-
-  chrome.storage.local.get("tabAnalytics", ({ tabAnalytics = [] }) => {
-    tabAnalytics.push(entry);
-    chrome.storage.local.set({ tabAnalytics });
-  });
-});
-
-// 2. When URL is updated, patch the previous entry
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.url) {
-    chrome.storage.local.get("tabAnalytics", ({ tabAnalytics = [] }) => {
-      const updated = tabAnalytics.map(entry => {
-        if (entry.id === tabId && !entry.url) {
-          return { ...entry, url: changeInfo.url };
-        }
-        return entry;
-      });
-      chrome.storage.local.set({ tabAnalytics: updated });
-    });
+let currentActiveTabId = null;
+let activeStartTime = null;
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  const now = Date.now();
+  if (currentActiveTabId && activeStartTime) {
+    recordFocusDuration(currentActiveTabId, now - activeStartTime);
   }
+  currentActiveTabId = tabId;
+  activeStartTime = now;
 });
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  const now = Date.now();
+  if (windowId === chrome.windows.WINDOW_ID_NONE) return;
 
-// 3. When tab is closed, store closedAt timestamp
-chrome.tabs.onRemoved.addListener((tabId) => {
-  chrome.storage.local.get("tabAnalytics", ({ tabAnalytics = [] }) => {
-    const updated = tabAnalytics.map(entry => {
-      if (entry.id === tabId && !entry.closedAt) {
-        return { ...entry, closedAt: Date.now() };
-      }
-      return entry;
-    });
-    chrome.storage.local.set({ tabAnalytics: updated });
+  chrome.tabs.query({ active: true, windowId }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab) return;
+
+    if (currentActiveTabId && activeStartTime) {
+      recordFocusDuration(currentActiveTabId, now - activeStartTime);
+    }
+
+    currentActiveTabId = tab.id;
+    activeStartTime = now;
   });
+});
+function recordFocusDuration(tabId, durationMs) {
+  chrome.tabs.get(tabId, (tab) => {
+    if (chrome.runtime.lastError || !tab || !tab.url) return;
+
+    try {
+      const domain = new URL(tab.url).hostname;
+      chrome.storage.local.get("focusStats", ({ focusStats = {} }) => {
+        if (!focusStats[domain]) {
+          focusStats[domain] = 0;
+        }
+        focusStats[domain] += durationMs;
+        chrome.storage.local.set({ focusStats });
+      });
+    } catch (e) {
+      console.warn("Invalid URL", tab.url);
+    }
+  });
+}
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "flushFocusTime") {
+    const now = Date.now();
+    if (currentActiveTabId && activeStartTime) {
+      recordFocusDuration(currentActiveTabId, now - activeStartTime);
+      activeStartTime = now;
+    }
+    sendResponse(true);
+  }
 });

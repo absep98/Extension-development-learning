@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabList = document.getElementById('tabList');
     const searchInput = document.getElementById('searchInput');
     const favoriteList = document.getElementById('favoriteList');
+    const toggleAllTabs = document.getElementById("toggleAllTabs");
     const storeFavoritesBtn = document.getElementById('storeFavoritesBtn');
     const sortSelect = document.getElementById("sortFavorites");
 
@@ -20,6 +21,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    toggleAllTabs.addEventListener("click", () => {
+        tabList.classList.toggle("hidden");
+        toggleAllTabs.classList.toggle("collapsed");
+    });
 
     sortSelect.addEventListener("change", () => {
         const selected = sortSelect.value;

@@ -7,31 +7,33 @@
     <script src="analytics.js" defer></script>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             margin: 20px;
-            background: #fffaf5;
+            background: linear-gradient(to bottom right, #fffaf5, #eef5ff);
+            color: #333;
         }
 
         h2, h3 {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
+            font-weight: 600;
+            color: #2f2f2f;
         }
 
         .chart-container {
             max-width: 700px;
             margin: 0 auto;
-            padding: 10px;
-            border-radius: 8px;
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 16px;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
         }
 
         canvas {
             width: 100% !important;
-            max-height: 300px;
+            max-height: 320px;
             margin-bottom: 20px;
         }
-
     </style>
 </head>
 <body>
@@ -45,5 +47,10 @@
         
     </div>
     <!-- Add more charts later -->
+      <div style="text-align: center; margin-top: 20px;">
+        <button id="resetBtn" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+            🔄 Reset Analytics
+        </button>
+    </div>
 </body>
 </html>

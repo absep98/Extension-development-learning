@@ -1,45 +1,82 @@
-body{
-    width: 300px;
-    font-family: sans-serif;
-    padding: 10px;
-    background-color: antiquewhite;
-    color: #222;
+body {
+    width: 320px;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 16px;
+    background: linear-gradient(to bottom right, #fff5ec, #f0f4ff);
+    color: #333;
 }
 
-li {
-    margin-bottom: 10px;
-    list-style: none;
+h2 {
+    text-align: center;
+    margin-bottom: 16px;
+    color: #2c3e50;
+}
+
+input[type="text"] {
+    width: 90%;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+button {
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+button:hover {
+    transform: scale(1.03);
+}
+
+button.primary {
+    background-color: #007bff;
+    color: white;
+}
+
+button.secondary {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+button.danger {
+    background-color: #ff4d4f;
+    color: white;
 }
 
 .sorting-controls {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 8px 12px;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 10px 12px;
     margin-bottom: 14px;
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
 }
 
 .sorting-controls label {
     font-size: 12px;
     color: #555;
-    margin-right: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.sorting-controls .sort-icon {
-    font-size: 15px;
-    color: #888;
 }
 
 .sorting-controls select {
     flex: 1;
-    padding: 5px 8px;
-    border-radius: 5px;
+    padding: 6px 8px;
+    border-radius: 6px;
     border: 1px solid #ccc;
     background: #fff;
     font-size: 13px;
@@ -51,7 +88,80 @@ li {
     outline: none;
 }
 
-button:hover {
-    background-color: #eee;
+.domain-header {
+    font-weight: 600;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    color: #4a4a4a;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+}
+
+.tab-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 6px 8px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.tab-entry:hover {
+    background: #f7f9fb;
+}
+
+.tab-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.tab-actions button {
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.starred {
+    color: gold;
+}
+
+.tab-actions button:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+}
+
+button.primary {
+    background-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+}
+
+button.primary:hover {
+    background-color: #0056cc;
+}
+
+.toggle-header {
     cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.toggle-header::after {
+    content: "▼";
+    font-size: 10px;
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.toggle-header.collapsed::after {
+    transform: rotate(-90deg);
+}
+
+.hidden {
+    display: none;
 }

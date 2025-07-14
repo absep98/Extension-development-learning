@@ -103,3 +103,17 @@ renderAnalyticsCharts();
 
 // Refresh data every 5 seconds
 setInterval(renderAnalyticsCharts, 5000);
+
+// Hook up Reset button
+document.addEventListener("DOMContentLoaded", () => {
+    const resetBtn = document.getElementById("resetBtn");
+    if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+            chrome.storage.local.remove("focusStats", () => {
+                if (barChart) barChart.destroy();
+                if (pieChart) pieChart.destroy();
+                alert("Analytics reset!");
+            });
+        });
+    }
+});

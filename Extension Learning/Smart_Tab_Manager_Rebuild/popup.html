@@ -30,10 +30,22 @@
     </div>
     <ul id="favoriteList"></ul>
 
+    <h3 id="toggleAllTabs" class="toggle-header">📂 All Tabs</h3>
+    <ul id="tabList" class="tab-list hidden"></ul>
 
+    <h3 id="focusToggleHeader" style="cursor: pointer;">🔒 Focus Mode ⯈</h3>
 
-    <h3>📂 All Tabs</h3>
-    <ul id="tabList"></ul>
+    <div id="focusModeSection" style="display: none; padding-left: 8px;">
+        <button id="focusToggleBtn" class="toggle-btn">🔘 Activate Focus Mode</button>
+
+        <div style="margin-top: 10px;">
+            <input type="text" id="blockDomainInput" placeholder="Add domain to block (e.g. youtube.com)" />
+            <button id="addBlockDomainBtn">➕ Add</button>
+        </div>
+
+        <ul id="blockedDomainsList" style="margin-top: 10px; padding-left: 0;"></ul>
+    </div>
+
     <script type="module" src="popup.js"></script>
 </body>
 </html>

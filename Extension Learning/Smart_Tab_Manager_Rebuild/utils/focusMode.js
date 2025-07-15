@@ -69,19 +69,23 @@ export function initializeFocusModeUI() {
         chrome.storage.local.get({ blockedDomains: [] }, (data) => {
             const blockedDomains = data.blockedDomains || [];
 
-            const alreadyExists = blockedDomains.find(entry => entry.domain === domain);
-            if (!alreadyExists) {
+            const existingIndex = blockedDomains.findIndex(entry => entry.domain === domain);
+            if (existingIndex >= 0) {
+                // 🔄 Update existing domain with new unblock time
+                blockedDomains[existingIndex].unblockUntil = unblockUntil;
+            } else {
+                // ➕ Add new blocked domain
                 blockedDomains.push({
                     domain,
                     unblockUntil
                 });
-
-                chrome.storage.local.set({ blockedDomains }, () => {
-                    blockDomainInput.value = "";
-                    blockDurationInput.value = "";
-                    renderBlockedDomains();
-                });
             }
+
+            chrome.storage.local.set({ blockedDomains }, () => {
+                blockDomainInput.value = "";
+                blockDurationInput.value = "";
+                renderBlockedDomains();
+            });
         });
     });
 
@@ -125,8 +129,13 @@ export function initializeFocusModeUI() {
 export function cleanExpiredBlocks(callback = () => {}) {
     chrome.storage.local.get({ blockedDomains: [] }, (data) => {
         const now = Date.now();
-        const cleaned = data.blockedDomains.filter(entry => {
-            return !entry.unblockUntil || entry.unblockUntil > now;
+
+        const cleaned = data.blockedDomains.map(entry => {
+            if (entry.unblockUntil && entry.unblockUntil <= now) {
+                // Expired temporary unblock – reset it to blocked
+                return { ...entry, unblockUntil: null };
+            }
+            return entry;
         });
 
         chrome.storage.local.set({ blockedDomains: cleaned }, callback);

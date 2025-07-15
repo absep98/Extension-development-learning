@@ -70,11 +70,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
     const blocked = data.blockedDomains || [];
     try {
-      const currentDomain = new URL(tab.url).hostname.replace(/^www\./, '');
       const now = Date.now();
+      const currentDomain = new URL(tab.url).hostname.replace(/^www\./, '');
+
       const isBlocked = blocked.some(entry => {
-        const isExpired = entry.unblockUntil && entry.unblockUntil <= now;
-        return !isExpired && currentDomain.endsWith(entry.domain);
+        const domainMatch = currentDomain.endsWith(entry.domain);
+
+        const isPermanentBlock = !entry.unblockUntil;
+        const isExpiredUnblock = entry.unblockUntil && now > entry.unblockUntil;
+
+        return domainMatch && (isPermanentBlock || isExpiredUnblock);
       });
 
       if (isBlocked) {

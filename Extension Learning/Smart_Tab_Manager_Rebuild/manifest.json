@@ -12,13 +12,25 @@
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
-            "16" : "icon16.png"
+            "16": "icon16.png"
         },
         "default_title": "Smart Tab Manager"
     },
     "background": {
         "service_worker": "background.js"
     },
-    "host_permissions": ["<all_urls>"],
-    "options_page": "analytics.html"
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "options_page": "analytics.html",
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "blocked.html"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
 }

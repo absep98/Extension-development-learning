@@ -38,12 +38,37 @@
     <div id="focusModeSection" style="display: none; padding-left: 8px;">
         <button id="focusToggleBtn" class="toggle-btn">🔘 Activate Focus Mode</button>
 
-        <div style="margin-top: 10px;">
-            <input type="text" id="blockDomainInput" placeholder="Add domain to block (e.g. youtube.com)" />
-            <button id="addBlockDomainBtn">➕ Add</button>
+        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; gap: 6px;">
+                <input 
+                    type="text" 
+                    id="blockDomainInput" 
+                    placeholder="Domain to block (e.g. youtube.com)" 
+                    style="flex: 2; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"
+                />
+                <input 
+                    type="number" 
+                    id="blockDurationInput" 
+                    placeholder="Time (min)" 
+                    min="0" 
+                    style="width: 80px; height: 18px; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"
+                    title="Optional time to allow access before blocking"
+                />
+                <button 
+                    id="addBlockDomainBtn" title="Block this domain"
+                    style="padding: 8px 12px; background-color: #f5f5f5; border: none; border-radius: 6px; font-weight: 500; cursor: pointer;"
+                >
+                    ➕
+                </button>
+            </div>
+            <small style="color: #666; font-size: 12px;">
+                Leave time empty to block permanently
+            </small>
         </div>
 
+
         <ul id="blockedDomainsList" style="margin-top: 10px; padding-left: 0;"></ul>
+        
     </div>
 
     <script type="module" src="popup.js"></script>

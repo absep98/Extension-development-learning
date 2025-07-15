@@ -2,6 +2,7 @@ import { groupTabsByDomain } from './utils/grouping.js';
 import { saveIfNotDuplicate } from './utils/bookmarks.js';
 import { renderFavorites } from './utils/renderFavorites.js';
 import { clearSmartTabFavorites } from './utils/clearFavorites.js';
+import { initializeFocusModeUI, cleanExpiredBlocks } from './utils/focusMode.js';
 // import { storeBookmarkedTabs } from './utils/storeBookmarkedTabs.js';
 
 let allTabs = [];
@@ -48,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     refreshTabs();
     renderFavorites();
+    initializeFocusModeUI();
 
     storeFavoritesBtn.addEventListener("click", async () => {
         const folderTitle = "Smart Tab Bookmarks";
@@ -229,4 +231,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+    cleanExpiredBlocks();
+
 });

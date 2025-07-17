@@ -41,6 +41,13 @@
     <h2>🔍 Time Tracking Debug Tool</h2>
     
     <div class="debug-section">
+        <h3>Real Data Analysis</h3>
+        <button onclick="analyzeRealData()">Analyze Real Browsing Data</button>
+        <button onclick="showDailyBreakdown()">Show Daily Breakdown</button>
+        <button onclick="generateMinimalSample()">Add Minimal Sample (if needed)</button>
+    </div>
+
+    <div class="debug-section">
         <h3>Storage Data</h3>
         <button onclick="checkStorage()">Check Current Storage</button>
         <button onclick="clearStorage()">Clear Storage</button>
@@ -51,6 +58,7 @@
         <h3>Test Data</h3>
         <button onclick="addTestData()">Add Test Data</button>
         <button onclick="simulateUsage()">Simulate 5 minutes on Google</button>
+        <button onclick="loadAISampleData()">Load AI Sample Data</button>
     </div>
 
     <div class="debug-section">
@@ -112,6 +120,185 @@
                     checkStorage();
                 });
             });
+        }
+
+        function loadAISampleData() {
+            // Generate comprehensive sample data for AI insights
+            const now = Date.now();
+            const sampleStats = {
+                'github.com': 3600000,        // 1 hour
+                'stackoverflow.com': 2700000, // 45 minutes
+                'youtube.com': 5400000,       // 1.5 hours
+                'twitter.com': 1800000,       // 30 minutes
+                'docs.google.com': 2400000,   // 40 minutes
+                'reddit.com': 3000000,        // 50 minutes
+                'coursera.org': 1200000,      // 20 minutes
+                'netflix.com': 4200000,       // 1 hour 10 minutes
+                'news.google.com': 900000     // 15 minutes
+            };
+
+            const sampleHistory = {};
+            Object.entries(sampleStats).forEach(([domain, totalTime]) => {
+                sampleHistory[domain] = [];
+                const sessions = 5;
+                for (let i = 0; i < sessions; i++) {
+                    const daysAgo = Math.floor(Math.random() * 7);
+                    sampleHistory[domain].push({
+                        timestamp: now - (daysAgo * 24 * 60 * 60 * 1000),
+                        duration: totalTime / sessions
+                    });
+                }
+            });
+
+            chrome.storage.local.set({ 
+                focusStats: sampleStats, 
+                focusHistory: sampleHistory 
+            }, () => {
+                log('✅ AI sample data loaded');
+                checkStorage();
+            });
+        }
+
+        function analyzeRealData() {
+            chrome.storage.local.get(['focusStats', 'focusHistory'], (data) => {
+                const focusStats = data.focusStats || {};
+                const focusHistory = data.focusHistory || {};
+                
+                log('📊 REAL DATA ANALYSIS:');
+                log('=====================');
+                
+                const totalTime = Object.values(focusStats).reduce((a, b) => a + b, 0);
+                const totalDomains = Object.keys(focusStats).length;
+                
+                log(`Total tracked time: ${formatDuration(totalTime)}`);
+                log(`Total domains: ${totalDomains}`);
+                
+                if (totalDomains > 0) {
+                    log('\nTop 5 domains:');
+                    Object.entries(focusStats)
+                        .sort(([,a], [,b]) => b - a)
+                        .slice(0, 5)
+                        .forEach(([domain, time]) => {
+                            log(`  ${domain}: ${formatDuration(time)}`);
+                        });
+                }
+                
+                // Analyze daily patterns
+                const dailyTotals = analyzeDailyPatterns(focusHistory);
+                if (dailyTotals.length > 0) {
+                    log('\nDaily totals (last 7 days):');
+                    dailyTotals.forEach(day => {
+                        log(`  ${day.date}: ${formatDuration(day.total)} (${day.sessions} sessions)`);
+                    });
+                }
+            });
+        }
+
+        function showDailyBreakdown() {
+            chrome.storage.local.get('focusHistory', (data) => {
+                const focusHistory = data.focusHistory || {};
+                const breakdown = analyzeDailyPatterns(focusHistory);
+                
+                log('📅 DAILY BREAKDOWN:');
+                log('==================');
+                
+                breakdown.forEach(day => {
+                    log(`\n${day.date}:`);
+                    log(`  Total: ${formatDuration(day.total)}`);
+                    log(`  Sessions: ${day.sessions}`);
+                    if (day.topDomain) {
+                        log(`  Top domain: ${day.topDomain.domain} (${formatDuration(day.topDomain.time)})`);
+                    }
+                });
+            });
+        }
+
+        function generateMinimalSample() {
+            chrome.storage.local.get(['focusStats'], (data) => {
+                const existing = data.focusStats || {};
+                const totalTime = Object.values(existing).reduce((a, b) => a + b, 0);
+                
+                if (totalTime < 60000) { // Less than 1 minute
+                    const now = Date.now();
+                    const minimal = {
+                        'github.com': 1800000,  // 30 minutes
+                        'google.com': 600000,   // 10 minutes
+                        'youtube.com': 900000   // 15 minutes
+                    };
+                    
+                    const minimalHistory = {};
+                    Object.entries(minimal).forEach(([domain, time]) => {
+                        minimalHistory[domain] = [
+                            { timestamp: now - 3600000, duration: time * 0.6 },
+                            { timestamp: now - 1800000, duration: time * 0.4 }
+                        ];
+                    });
+                    
+                    chrome.storage.local.set({
+                        focusStats: { ...existing, ...minimal },
+                        focusHistory: minimalHistory
+                    }, () => {
+                        log('✅ Minimal sample data added');
+                    });
+                } else {
+                    log('ℹ️ Sufficient real data exists, no sample needed');
+                }
+            });
+        }
+
+        function analyzeDailyPatterns(focusHistory) {
+            const now = Date.now();
+            const oneDayMs = 24 * 60 * 60 * 1000;
+            const dailyData = [];
+            
+            for (let i = 0; i < 7; i++) {
+                const dayStart = now - (i * oneDayMs);
+                const dayStartOfDay = new Date(dayStart);
+                dayStartOfDay.setHours(0, 0, 0, 0);
+                const dayEnd = dayStartOfDay.getTime() + oneDayMs;
+                
+                const dayData = {
+                    date: dayStartOfDay.toDateString(),
+                    total: 0,
+                    sessions: 0,
+                    domains: {},
+                    topDomain: null
+                };
+                
+                for (const [domain, sessions] of Object.entries(focusHistory)) {
+                    for (const session of sessions) {
+                        if (session.timestamp >= dayStartOfDay.getTime() && session.timestamp < dayEnd) {
+                            dayData.total += session.duration;
+                            dayData.sessions++;
+                            
+                            if (!dayData.domains[domain]) {
+                                dayData.domains[domain] = 0;
+                            }
+                            dayData.domains[domain] += session.duration;
+                        }
+                    }
+                }
+                
+                // Find top domain for the day
+                if (Object.keys(dayData.domains).length > 0) {
+                    const topEntry = Object.entries(dayData.domains)
+                        .sort(([,a], [,b]) => b - a)[0];
+                    dayData.topDomain = { domain: topEntry[0], time: topEntry[1] };
+                }
+                
+                dailyData.push(dayData);
+            }
+            
+            return dailyData.reverse();
+        }
+
+        function formatDuration(ms) {
+            const totalSeconds = Math.round(ms / 1000);
+            if (totalSeconds < 60) return `${totalSeconds}s`;
+            const minutes = Math.floor(totalSeconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const remMin = minutes % 60;
+            return hours > 0 ? `${hours}h ${remMin}m` : `${minutes}m`;
         }
 
         // Auto-check storage on load

@@ -3,6 +3,7 @@ import { saveIfNotDuplicate } from './utils/bookmarks.js';
 import { renderFavorites } from './utils/renderFavorites.js';
 import { clearSmartTabFavorites } from './utils/clearFavorites.js';
 import { initializeFocusModeUI, cleanExpiredBlocks } from './utils/focusMode.js';
+import { initializeAIInsightsUI, addAIInsightsStyles } from './utils/aiInsightsUI.js';
 // import { storeBookmarkedTabs } from './utils/storeBookmarkedTabs.js';
 
 let allTabs = [];
@@ -50,6 +51,10 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshTabs();
     renderFavorites();
     initializeFocusModeUI();
+    
+    // Initialize AI Insights UI
+    addAIInsightsStyles();
+    initializeAIInsightsUI();
 
     storeFavoritesBtn.addEventListener("click", async () => {
         const folderTitle = "Smart Tab Bookmarks";

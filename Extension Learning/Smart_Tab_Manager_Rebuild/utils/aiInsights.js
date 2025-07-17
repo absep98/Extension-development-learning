@@ -15,7 +15,7 @@ const DOMAIN_CATEGORIES = {
         // Design & Productivity
         'miro.com', 'lucidchart.com', 'draw.io', 'excalidraw.com',
         // Documentation & Learning
-        'developer.mozilla.org', 'w3schools.com', 'geeksforgeeks.org'
+        'developer.mozilla.org', 'w3schools.com', 'geeksforgeeks.org', 'workat.tech', 'leetcode.com', 'kaggle.com'
     ],
     social: [
         'facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com',
@@ -39,21 +39,68 @@ const DOMAIN_CATEGORIES = {
     ]
 };
 
-// Categorize a domain
+// Categorize a domain using both default and custom categories
 function categorizeDomain(domain) {
     // Clean the domain - remove www, https, etc.
     const cleanDomain = domain.replace(/^(https?:\/\/)?(www\.)?/, '').toLowerCase();
     
+    return new Promise((resolve) => {
+        // Get custom categories from storage
+        chrome.storage.local.get(['customDomainCategories'], (data) => {
+            const customCategories = data.customDomainCategories || {};
+            
+            // First check custom categories (user preferences take priority)
+            for (const [category, domains] of Object.entries(customCategories)) {
+                if (domains.some(d => cleanDomain.includes(d) || d.includes(cleanDomain))) {
+                    resolve(category);
+                    return;
+                }
+            }
+            
+            // Then check default categories
+            for (const [category, domains] of Object.entries(DOMAIN_CATEGORIES)) {
+                if (domains.some(d => cleanDomain.includes(d) || d.includes(cleanDomain))) {
+                    resolve(category);
+                    return;
+                }
+            }
+            
+            resolve('other');
+        });
+    });
+}
+
+// Synchronous version for when we already have the custom categories
+function categorizeDomainSync(domain, customCategories = {}) {
+    // Clean the domain - remove www, https, etc.
+    const cleanDomain = domain.replace(/^(https?:\/\/)?(www\.)?/, '').toLowerCase();
+    
+    // First check custom categories (user preferences take priority)
+    for (const [category, domains] of Object.entries(customCategories)) {
+        if (domains.some(d => cleanDomain.includes(d) || d.includes(cleanDomain))) {
+            return category;
+        }
+    }
+    
+    // Then check default categories
     for (const [category, domains] of Object.entries(DOMAIN_CATEGORIES)) {
         if (domains.some(d => cleanDomain.includes(d) || d.includes(cleanDomain))) {
             return category;
         }
     }
+    
     return 'other';
 }
 
-// Analyze browsing patterns with enhanced daily breakdown
-function analyzeBrowsingData(focusStats, focusHistory) {
+// Analyze browsing patterns with enhanced daily breakdown and custom categories
+async function analyzeBrowsingData(focusStats, focusHistory) {
+    // Get custom categories first
+    const customCategories = await new Promise((resolve) => {
+        chrome.storage.local.get(['customDomainCategories'], (data) => {
+            resolve(data.customDomainCategories || {});
+        });
+    });
+
     const analysis = {
         totalTime: 0,
         categories: {},
@@ -64,10 +111,10 @@ function analyzeBrowsingData(focusStats, focusHistory) {
         insights: []
     };
 
-    // Calculate total time and categorize
+    // Calculate total time and categorize using custom categories
     for (const [domain, totalMs] of Object.entries(focusStats)) {
         analysis.totalTime += totalMs;
-        const category = categorizeDomain(domain);
+        const category = categorizeDomainSync(domain, customCategories);
         
         if (!analysis.categories[category]) {
             analysis.categories[category] = { time: 0, domains: [] };
@@ -80,7 +127,11 @@ function analyzeBrowsingData(focusStats, focusHistory) {
     analysis.topDomains = Object.entries(focusStats)
         .sort(([,a], [,b]) => b - a)
         .slice(0, 5)
-        .map(([domain, time]) => ({ domain, time, category: categorizeDomain(domain) }));
+        .map(([domain, time]) => ({ 
+            domain, 
+            time, 
+            category: categorizeDomainSync(domain, customCategories) 
+        }));
 
     // Analyze weekly trends and daily patterns
     const now = Date.now();
@@ -132,7 +183,7 @@ function analyzeBrowsingData(focusStats, focusHistory) {
                 analysis.dailyBreakdown[dayKey].totalTime += session.duration;
                 analysis.dailyBreakdown[dayKey].sessionCount++;
                 
-                const category = categorizeDomain(domain);
+                const category = categorizeDomainSync(domain, customCategories);
                 if (!analysis.dailyBreakdown[dayKey].categories[category]) {
                     analysis.dailyBreakdown[dayKey].categories[category] = 0;
                 }
@@ -162,7 +213,7 @@ async function generateProductivityInsights(analysis) {
         categoryPercentages[category] = ((data.time / analysis.totalTime) * 100).toFixed(1);
     }
 
-    // Most productive hours
+    // Most productive hours with proper chronological sorting for display
     const productiveHours = Object.entries(analysis.hourlyPatterns)
         .sort(([,a], [,b]) => b - a)
         .slice(0, 3)
@@ -170,8 +221,14 @@ async function generateProductivityInsights(analysis) {
             const h = parseInt(hour);
             const period = h >= 12 ? 'PM' : 'AM';
             const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-            return `${displayHour} ${period}`;
+            return { hour: h, display: `${displayHour} ${period}` };
         });
+
+    // Sort the top hours chronologically for better display
+    const sortedForDisplay = productiveHours
+        .slice(0, 2)
+        .sort((a, b) => a.hour - b.hour)  // Sort by actual hour number
+        .map(h => h.display);
 
     // Weekly trend analysis
     const weeklyChange = analysis.weeklyTrends.lastWeek > 0 
@@ -183,8 +240,8 @@ async function generateProductivityInsights(analysis) {
         insights.push(`📈 You spent ${categoryPercentages.productivity}% of your time on productivity tools this week`);
     }
 
-    if (productiveHours.length > 0) {
-        insights.push(`⏰ You're most active during ${productiveHours.slice(0, 2).join(' and ')}`);
+    if (sortedForDisplay.length > 0) {
+        insights.push(`⏰ You're most active during ${sortedForDisplay.join(' and ')}`);
     }
 
     if (Math.abs(weeklyChange) > 5) {
@@ -218,8 +275,8 @@ async function generateProductivityInsights(analysis) {
         recommendations.push("💡 Consider using focus mode during work hours to limit social media");
     }
     
-    if (productiveHours.length > 0) {
-        recommendations.push(`💡 Schedule important tasks during your peak hours: ${productiveHours[0]}`);
+    if (sortedForDisplay.length > 0) {
+        recommendations.push(`💡 Schedule important tasks during your peak hours: ${sortedForDisplay[0]}`);
     }
 
     return {
@@ -241,14 +298,14 @@ function formatDuration(ms) {
     return hours > 0 ? `${hours}h ${remMin}m` : `${minutes}m`;
 }
 
-// Main function to get AI insights using real browsing data
+// Main function to get AI insights using real browsing data with custom categories
 export async function getAIProductivityInsights() {
-    return new Promise((resolve) => {
-        chrome.storage.local.get(['focusStats', 'focusHistory'], (data) => {
+    return new Promise(async (resolve) => {
+        chrome.storage.local.get(['focusStats', 'focusHistory'], async (data) => {
             const focusStats = data.focusStats || {};
             const focusHistory = data.focusHistory || {};
             
-            console.log('Analyzing real browsing data for AI insights...');
+            console.log('Analyzing real browsing data for AI insights with custom categories...');
             
             if (Object.keys(focusStats).length === 0) {
                 resolve({
@@ -263,8 +320,8 @@ export async function getAIProductivityInsights() {
                 return;
             }
 
-            const analysis = analyzeBrowsingData(focusStats, focusHistory);
-            const aiInsights = generateProductivityInsights(analysis);
+            const analysis = await analyzeBrowsingData(focusStats, focusHistory);
+            const aiInsights = await generateProductivityInsights(analysis);
             
             // Add data quality assessment with fallback
             let dataQuality;
@@ -280,7 +337,7 @@ export async function getAIProductivityInsights() {
             aiInsights.dataQuality = dataQuality || 'limited'; // Fallback to 'limited'
             aiInsights.dailyStats = analysis.dailyBreakdown;
             
-            console.log('Generated AI insights from real data:', aiInsights);
+            console.log('Generated AI insights from real data with custom categories:', aiInsights);
             resolve(aiInsights);
         });
     });
@@ -337,4 +394,4 @@ function assessDataQuality(focusStats, focusHistory) {
 }
 
 // Export helper functions
-export { categorizeDomain, formatDuration };
+export { categorizeDomain, categorizeDomainSync, formatDuration };

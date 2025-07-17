@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggleAllTabs = document.getElementById("toggleAllTabs");
     const storeFavoritesBtn = document.getElementById('storeFavoritesBtn');
     const sortSelect = document.getElementById("sortFavorites");
+    const settingsBtn = document.getElementById("settingsBtn");
 
     document.getElementById("clearFavoritesBtn").addEventListener("click", () => {
         clearSmartTabFavorites().then(() => {
@@ -39,6 +40,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (analyticsBtn) {
         analyticsBtn.addEventListener("click", () => {
             chrome.runtime.openOptionsPage();
+        });
+    }
+
+    // Settings button - open domain categories settings
+    if (settingsBtn) {
+        settingsBtn.addEventListener("click", () => {
+            chrome.tabs.create({ url: chrome.runtime.getURL("settings.html") });
         });
     }
 

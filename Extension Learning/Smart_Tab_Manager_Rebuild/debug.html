@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Time Tracking</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007acc;
+            color: white;
+        }
+        button:hover { background: #005a9e; }
+        #output {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h2>🔍 Time Tracking Debug Tool</h2>
+    
+    <div class="debug-section">
+        <h3>Storage Data</h3>
+        <button onclick="checkStorage()">Check Current Storage</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <button onclick="flushTime()">Flush Current Time</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>Test Data</h3>
+        <button onclick="addTestData()">Add Test Data</button>
+        <button onclick="simulateUsage()">Simulate 5 minutes on Google</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>Output</h3>
+        <div id="output">Click buttons above to debug...</div>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function checkStorage() {
+            chrome.storage.local.get(['focusStats'], (result) => {
+                log('Current storage data:');
+                log(JSON.stringify(result.focusStats || {}, null, 2));
+            });
+        }
+
+        function clearStorage() {
+            chrome.storage.local.remove('focusStats', () => {
+                log('✅ Storage cleared');
+                checkStorage();
+            });
+        }
+
+        function flushTime() {
+            chrome.runtime.sendMessage({ type: "flushFocusTime" }, (response) => {
+                log('✅ Time flushed, checking storage...');
+                setTimeout(checkStorage, 100);
+            });
+        }
+
+        function addTestData() {
+            const testData = {
+                'google.com': 120000,      // 2 minutes
+                'github.com': 300000,      // 5 minutes  
+                'stackoverflow.com': 180000, // 3 minutes
+                'youtube.com': 600000      // 10 minutes
+            };
+            
+            chrome.storage.local.set({ focusStats: testData }, () => {
+                log('✅ Test data added');
+                checkStorage();
+            });
+        }
+
+        function simulateUsage() {
+            // Simulate 5 minutes (300000ms) on google.com
+            chrome.storage.local.get('focusStats', (result) => {
+                const stats = result.focusStats || {};
+                stats['google.com'] = (stats['google.com'] || 0) + 300000;
+                
+                chrome.storage.local.set({ focusStats: stats }, () => {
+                    log('✅ Simulated 5 minutes on google.com');
+                    checkStorage();
+                });
+            });
+        }
+
+        // Auto-check storage on load
+        setTimeout(checkStorage, 500);
+    </script>
+</body>
+</html>

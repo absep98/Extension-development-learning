@@ -30,6 +30,8 @@ export function initializeFocusModeUI() {
         isFocusModeActive = !isFocusModeActive;
         chrome.storage.local.set({ focusModeActive: isFocusModeActive }, () => {
             updateFocusToggleUI();
+            // Update blocking rules immediately
+            chrome.runtime.sendMessage({ type: "updateBlockingRules" });
         });
     });
 
@@ -85,6 +87,8 @@ export function initializeFocusModeUI() {
                 blockDomainInput.value = "";
                 blockDurationInput.value = "";
                 renderBlockedDomains();
+                // Update blocking rules immediately
+                chrome.runtime.sendMessage({ type: "updateBlockingRules" });
             });
         });
     });
@@ -114,7 +118,11 @@ export function initializeFocusModeUI() {
                     removeBtn.onclick = () => {
                         const updatedList = [...data.blockedDomains];
                         updatedList.splice(index, 1);
-                        chrome.storage.local.set({ blockedDomains: updatedList }, renderBlockedDomains);
+                        chrome.storage.local.set({ blockedDomains: updatedList }, () => {
+                            renderBlockedDomains();
+                            // Update blocking rules immediately
+                            chrome.runtime.sendMessage({ type: "updateBlockingRules" });
+                        });
                     };
 
                     li.appendChild(removeBtn);

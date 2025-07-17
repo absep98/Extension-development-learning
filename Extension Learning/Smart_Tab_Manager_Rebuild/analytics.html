@@ -21,8 +21,8 @@
         }
 
         .chart-container {
-            max-width: 700px;
-            margin: 0 auto;
+            max-width: 1000px;
+            margin: 0 auto 24px;
             padding: 16px;
             border-radius: 12px;
             background: #ffffff;
@@ -34,20 +34,37 @@
             max-height: 320px;
             margin-bottom: 20px;
         }
+
+        .flex-charts {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            justify-content: space-between;
+        }
+
+        .flex-charts canvas {
+            width: 100% !important;
+            max-height: 300px;
+        }
     </style>
 </head>
 <body>
     <h2>📊 Tab Usage Analytics</h2>
+
     <div class="chart-container">
         <h3>🧭 Time Spent per Domain (Bar)</h3>
         <canvas id="domainChart"></canvas>
-
-        <h3>🏆 Top 5 Domains (Pie)</h3>
-        <canvas id="topSitesChart"></canvas>
-        
     </div>
-    <!-- Add more charts later -->
-      <div style="text-align: center; margin-top: 20px;">
+
+    <div class="chart-container">
+        <h3>🏆 Top 5 Domains (This Week)</h3>
+        <div class="flex-charts">
+            <canvas id="topSitesChart"></canvas>
+            <canvas id="weeklyTopSitesChart"></canvas>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
         <button id="resetBtn" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
             🔄 Reset Analytics
         </button>

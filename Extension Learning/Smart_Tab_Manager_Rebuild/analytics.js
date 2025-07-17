@@ -10,6 +10,7 @@ const barColors = [
 
 let barChart = null;
 let pieChart = null;
+let weeklyChart = null;
 
 function formatDuration(ms) {
     const totalSeconds = Math.round(ms / 1000);
@@ -22,17 +23,50 @@ function formatDuration(ms) {
 
 function renderAnalyticsCharts() {
     chrome.runtime.sendMessage({ type: "flushFocusTime" }, () => {
-        chrome.storage.local.get("focusStats", ({ focusStats = {} }) => {
+        chrome.storage.local.get(["focusStats", "focusHistory"], ({ focusStats = {}, focusHistory = {} }) => {
+            console.log("Current focus stats:", focusStats);
+
             const labels = Object.keys(focusStats);
             const values = Object.values(focusStats);
             const formattedValues = values.map(formatDuration);
 
-            // Destroy existing charts before redrawing
+            // Handle empty state
+            if (labels.length === 0) {
+                document.getElementById("domainChart").style.display = "none";
+                document.getElementById("topSitesChart").style.display = "none";
+                document.getElementById("weeklyTopSitesChart").style.display = "none";
+
+                let emptyMessage = document.getElementById("emptyMessage");
+                if (!emptyMessage) {
+                    emptyMessage = document.createElement("div");
+                    emptyMessage.id = "emptyMessage";
+                    emptyMessage.style.textAlign = "center";
+                    emptyMessage.style.color = "#666";
+                    emptyMessage.style.fontSize = "16px";
+                    emptyMessage.style.marginTop = "50px";
+                    emptyMessage.textContent = "No browsing data yet. Start browsing to see analytics!";
+                    document.body.appendChild(emptyMessage);
+                }
+
+                return;
+            } else {
+                // Show charts, hide empty message
+                const emptyMessage = document.getElementById("emptyMessage");
+                if (emptyMessage) emptyMessage.remove();
+
+                document.getElementById("domainChart").style.display = "block";
+                document.getElementById("topSitesChart").style.display = "block";
+                document.getElementById("weeklyTopSitesChart").style.display = "block";
+            }
+
+            // Cleanup
             if (barChart) barChart.destroy();
             if (pieChart) pieChart.destroy();
+            if (weeklyChart) weeklyChart.destroy();
 
             // ---- Bar Chart ----
             const barCtx = document.getElementById("domainChart").getContext("2d");
+            console.log("Creating bar chart with data:", { labels, values, formattedValues });
             barChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
@@ -94,6 +128,61 @@ function renderAnalyticsCharts() {
                     }
                 }
             });
+
+            // ---- Weekly Pie Chart ----
+            const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            const weeklyTotals = {};
+
+            console.log("Focus history data:", focusHistory);
+
+            for (const [domain, entries] of Object.entries(focusHistory)) {
+                for (const { timestamp, duration } of entries) {
+                    if (timestamp >= weekAgo) {
+                        weeklyTotals[domain] = (weeklyTotals[domain] || 0) + duration;
+                    }
+                }
+            }
+
+            console.log("Weekly totals:", weeklyTotals);
+
+            const sortedWeekly = Object.entries(weeklyTotals)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            const weeklyLabels = sortedWeekly.map(([domain]) => domain);
+            const weeklyData = sortedWeekly.map(([, duration]) => duration);
+
+            const weeklyCtx = document.getElementById("weeklyTopSitesChart").getContext("2d");
+            
+            // Only create weekly chart if there's data
+            if (weeklyLabels.length > 0) {
+                weeklyChart = new Chart(weeklyCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: weeklyLabels,
+                        datasets: [{
+                            data: weeklyData,
+                            backgroundColor: barColors.slice(0, weeklyLabels.length)
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => formatDuration(context.raw)
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Show "No weekly data" message
+                weeklyCtx.fillStyle = '#666';
+                weeklyCtx.font = '16px Inter';
+                weeklyCtx.textAlign = 'center';
+                weeklyCtx.fillText('No data for past 7 days', weeklyCtx.canvas.width / 2, weeklyCtx.canvas.height / 2);
+            }
         });
     });
 }
@@ -104,14 +193,15 @@ renderAnalyticsCharts();
 // Refresh data every 5 seconds
 setInterval(renderAnalyticsCharts, 5000);
 
-// Hook up Reset button
+// Reset Button
 document.addEventListener("DOMContentLoaded", () => {
     const resetBtn = document.getElementById("resetBtn");
     if (resetBtn) {
         resetBtn.addEventListener("click", () => {
-            chrome.storage.local.remove("focusStats", () => {
+            chrome.storage.local.remove(["focusStats", "focusHistory"], () => {
                 if (barChart) barChart.destroy();
                 if (pieChart) pieChart.destroy();
+                if (weeklyChart) weeklyChart.destroy();
                 alert("Analytics reset!");
             });
         });

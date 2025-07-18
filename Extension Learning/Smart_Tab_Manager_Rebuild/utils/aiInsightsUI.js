@@ -136,8 +136,6 @@ export function initializeAIInsightsUI() {
     }
 
     function renderDataQuality(dataQuality, dailyStats) {
-        console.log('renderDataQuality called with:', { dataQuality, dailyStats });
-        
         const qualityIcons = {
             'insufficient': '⚠️',
             'limited': '📊',

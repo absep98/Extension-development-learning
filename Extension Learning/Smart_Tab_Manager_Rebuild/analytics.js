@@ -24,8 +24,6 @@ function formatDuration(ms) {
 function renderAnalyticsCharts() {
     chrome.runtime.sendMessage({ type: "flushFocusTime" }, () => {
         chrome.storage.local.get(["focusStats", "focusHistory"], ({ focusStats = {}, focusHistory = {} }) => {
-            console.log("Current focus stats:", focusStats);
-
             const labels = Object.keys(focusStats);
             const values = Object.values(focusStats);
             const formattedValues = values.map(formatDuration);
@@ -66,7 +64,6 @@ function renderAnalyticsCharts() {
 
             // ---- Bar Chart ----
             const barCtx = document.getElementById("domainChart").getContext("2d");
-            console.log("Creating bar chart with data:", { labels, values, formattedValues });
             barChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
@@ -133,8 +130,6 @@ function renderAnalyticsCharts() {
             const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
             const weeklyTotals = {};
 
-            console.log("Focus history data:", focusHistory);
-
             for (const [domain, entries] of Object.entries(focusHistory)) {
                 for (const { timestamp, duration } of entries) {
                     if (timestamp >= weekAgo) {
@@ -142,8 +137,6 @@ function renderAnalyticsCharts() {
                     }
                 }
             }
-
-            console.log("Weekly totals:", weeklyTotals);
 
             const sortedWeekly = Object.entries(weeklyTotals)
                 .sort((a, b) => b[1] - a[1])

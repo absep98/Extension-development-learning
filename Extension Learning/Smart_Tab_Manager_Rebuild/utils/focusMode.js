@@ -10,6 +10,49 @@ export function initializeFocusModeUI() {
     const blockDurationInput = document.getElementById("blockDurationInput");
 
     let isFocusModeActive = false;
+    let timerCheckInterval = null;
+
+    // Clean up when popup closes
+    window.addEventListener('beforeunload', () => {
+        stopTimerCheck();
+        // Force a final check for expired timers
+        cleanExpiredBlocks(() => {
+            chrome.runtime.sendMessage({ type: "updateBlockingRules" });
+        });
+    });
+
+    // Set up periodic timer check for expired blocks
+    function startTimerCheck() {
+        if (timerCheckInterval) clearInterval(timerCheckInterval);
+        
+        timerCheckInterval = setInterval(() => {
+            chrome.storage.local.get({ blockedDomains: [] }, (data) => {
+                const now = Date.now();
+                const hasExpiredTimers = data.blockedDomains.some(entry => 
+                    entry.unblockUntil && entry.unblockUntil <= now
+                );
+                
+                if (hasExpiredTimers) {
+                    if (expiredDomain) {
+                    updateDeclarativeNetRequestRules(); // This will clean and update
+                }
+                    cleanExpiredBlocks(() => {
+                        // Update blocking rules when timers expire
+                        chrome.runtime.sendMessage({ type: "updateBlockingRules" });
+                        renderBlockedDomains(); // Refresh the UI
+                    });
+                }
+            });
+        }, 5000); // Check every 5 seconds
+    }
+
+    // Stop timer check when not needed
+    function stopTimerCheck() {
+        if (timerCheckInterval) {
+            clearInterval(timerCheckInterval);
+            timerCheckInterval = null;
+        }
+    }
 
     // Toggle collapse/expand
     focusToggleHeader.addEventListener("click", () => {
@@ -23,6 +66,11 @@ export function initializeFocusModeUI() {
         isFocusModeActive = data.focusModeActive || false;
         updateFocusToggleUI();
         renderBlockedDomains(); // use internal fetch + cleanup
+        
+        // Start timer check if focus mode is active
+        if (isFocusModeActive) {
+            startTimerCheck();
+        }
     });
 
     // Toggle Focus Mode ON/OFF
@@ -32,6 +80,13 @@ export function initializeFocusModeUI() {
             updateFocusToggleUI();
             // Update blocking rules immediately
             chrome.runtime.sendMessage({ type: "updateBlockingRules" });
+            
+            // Start/stop timer check based on focus mode state
+            if (isFocusModeActive) {
+                startTimerCheck();
+            } else {
+                stopTimerCheck();
+            }
         });
     });
 
@@ -59,7 +114,7 @@ export function initializeFocusModeUI() {
         const duration = parseInt(blockDurationInput.value.trim());
 
         if (!domain) {
-            alert("Please enter a valid domain or URL.");
+            showStatus("Please enter a valid domain or URL.", "error");
             return;
         }
 
@@ -89,6 +144,11 @@ export function initializeFocusModeUI() {
                 renderBlockedDomains();
                 // Update blocking rules immediately
                 chrome.runtime.sendMessage({ type: "updateBlockingRules" });
+                
+                // Start timer check if we added a domain with a timer and focus mode is active
+                if (unblockUntil && isFocusModeActive) {
+                    startTimerCheck();
+                }
             });
         });
     });
@@ -106,16 +166,23 @@ export function initializeFocusModeUI() {
 
                 data.blockedDomains.forEach(({ domain, unblockUntil }, index) => {
                     const li = document.createElement("li");
-                    const isTemporary = unblockUntil && Date.now() < unblockUntil;
+                    const now = Date.now();
+                    const isTemporaryUnblock = unblockUntil && now < unblockUntil;
+                    const hasExpiredUnblock = unblockUntil && now >= unblockUntil;
 
-                    li.textContent = `${domain}${isTemporary
-                        ? ` (unblocks until ${new Date(unblockUntil).toLocaleTimeString()})`
-                        : ""}`;
+                    let statusText = "";
+                    if (isTemporaryUnblock) {
+                        statusText = ` (✅ allowed until ${new Date(unblockUntil).toLocaleTimeString()})`;
+                    } else if (hasExpiredUnblock || !unblockUntil) {
+                        statusText = " (🚫 BLOCKED)";
+                    }
+
+                    li.textContent = `${domain}${statusText}`;
 
                     const removeBtn = document.createElement("button");
                     removeBtn.textContent = "❌";
                     removeBtn.style.marginLeft = "10px";
-                    removeBtn.onclick = () => {
+                    removeBtn.addEventListener('click', () => {
                         const updatedList = [...data.blockedDomains];
                         updatedList.splice(index, 1);
                         chrome.storage.local.set({ blockedDomains: updatedList }, () => {
@@ -123,7 +190,7 @@ export function initializeFocusModeUI() {
                             // Update blocking rules immediately
                             chrome.runtime.sendMessage({ type: "updateBlockingRules" });
                         });
-                    };
+                    });
 
                     li.appendChild(removeBtn);
                     blockedDomainsList.appendChild(li);
@@ -138,14 +205,54 @@ export function cleanExpiredBlocks(callback = () => {}) {
     chrome.storage.local.get({ blockedDomains: [] }, (data) => {
         const now = Date.now();
 
-        const cleaned = data.blockedDomains.map(entry => {
+        // Convert expired temporary unblocks to permanent blocks
+        const updated = data.blockedDomains.map(entry => {
+            // If it's a temporary unblock that has expired, make it a permanent block
             if (entry.unblockUntil && entry.unblockUntil <= now) {
-                // Expired temporary unblock – reset it to blocked
-                return { ...entry, unblockUntil: null };
+                return { domain: entry.domain, unblockUntil: null }; // Remove unblockUntil to make it permanent
             }
-            return entry;
+            return entry; // Keep as is
         });
 
-        chrome.storage.local.set({ blockedDomains: cleaned }, callback);
+        // Only update storage if something changed
+        const hasChanges = updated.some((entry, index) => 
+            JSON.stringify(entry) !== JSON.stringify(data.blockedDomains[index])
+        );
+
+        if (hasChanges) {
+            chrome.storage.local.set({ blockedDomains: updated }, callback);
+        } else {
+            callback();
+        }
     });
+}
+
+// Simple status display function for focus mode
+function showStatus(message, type) {
+    // Create or get status element
+    let statusEl = document.getElementById('focusModeStatus');
+    if (!statusEl) {
+        statusEl = document.createElement('div');
+        statusEl.id = 'focusModeStatus';
+        statusEl.style.cssText = `
+            position: fixed; top: 10px; right: 10px; padding: 10px 15px;
+            border-radius: 4px; z-index: 1000; font-weight: 500;
+            max-width: 300px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        `;
+        document.body.appendChild(statusEl);
+    }
+    
+    // Set message and style based on type
+    statusEl.textContent = message;
+    statusEl.className = type === 'error' ? 'error' : 'success';
+    statusEl.style.backgroundColor = type === 'error' ? '#dc3545' : '#28a745';
+    statusEl.style.color = 'white';
+    statusEl.style.display = 'block';
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+        if (statusEl.parentNode) {
+            statusEl.parentNode.removeChild(statusEl);
+        }
+    }, 3000);
 }

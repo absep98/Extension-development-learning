@@ -1,21 +1,24 @@
 {
     "manifest_version": 3,
-    "description": "A simple tab manager extension",
-    "name": "Smart Tab Manager",
-    "version": "1.0.0",
+    "description": "Advanced tab manager with AI-powered productivity insights",
+    "name": "Smart Tab Manager Pro",
+    "version": "2.0.0",
     "permissions": [
         "bookmarks",
         "storage",
         "tabs",
         "tabGroups",
-        "declarativeNetRequest"
+        "declarativeNetRequest",
+        "windows"
     ],
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
-            "16": "icon16.png"
+            "16": "icon16.png",
+            "48": "icon16.png",
+            "128": "icon16.png"
         },
-        "default_title": "Smart Tab Manager"
+        "default_title": "Smart Tab Manager Pro"
     },
     "background": {
         "service_worker": "background.js"
@@ -28,11 +31,36 @@
         {
             "resources": [
                 "blocked.html",
-                "debug.html"
+                "debug.html",
+                "settings.html",
+                "enhanced-ui.css"
             ],
             "matches": [
                 "<all_urls>"
             ]
         }
-    ]
+    ],
+    "commands": {
+        "open-search": {
+            "suggested_key": {
+                "default": "Ctrl+K",
+                "mac": "Command+K"
+            },
+            "description": "Open tab search"
+        },
+        "group-tabs": {
+            "suggested_key": {
+                "default": "Ctrl+G",
+                "mac": "Command+G"
+            },
+            "description": "Group tabs by domain"
+        },
+        "export-data": {
+            "suggested_key": {
+                "default": "Ctrl+E",
+                "mac": "Command+E"
+            },
+            "description": "Export extension data"
+        }
+    }
 }

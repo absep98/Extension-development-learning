@@ -2,7 +2,7 @@ export function saveIfNotDuplicate(folderId, tab) {
     chrome.bookmarks.getChildren(folderId, (children) => {
         const isAlreadyBookmarked = children.some(child => child.url === tab.url);
         if (isAlreadyBookmarked) {
-            alert("This tab is already bookmarked!!");
+            // Use console for debugging instead of alert in bookmarks
             return;
         }
         chrome.bookmarks.create({
@@ -24,7 +24,7 @@ export function saveIfNotDuplicate(folderId, tab) {
                     favorites,
                     [timestampKey]: Date.now()   // <-- ✅ this is what enables recent sorting to work right away
                 }, () => {
-                alert("Tab bookmarked successfully...");
+                // Bookmark saved successfully - no need for alert
                 renderTabs(allTabs);
                 renderFavorites();
                 });

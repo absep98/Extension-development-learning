@@ -5,7 +5,7 @@ const DOMAIN_CATEGORIES = {
     productivity: [
         'github.com', 'stackoverflow.com', 'gitlab.com', 'bitbucket.org',
         'notion.so', 'trello.com', 'asana.com', 'slack.com', 'teams.microsoft.com',
-        'docs.google.com', 'sheets.google.com', 'drive.google.com',
+        // Collaboration & File Sharing
         'figma.com', 'canva.com', 'adobe.com',
         // AI & Development Tools
         'chatgpt.com', 'openai.com', 'chat.openai.com', 'claude.ai', 'anthropic.com',
@@ -305,8 +305,6 @@ export async function getAIProductivityInsights() {
             const focusStats = data.focusStats || {};
             const focusHistory = data.focusHistory || {};
             
-            console.log('Analyzing real browsing data for AI insights with custom categories...');
-            
             if (Object.keys(focusStats).length === 0) {
                 resolve({
                     insights: ['📊 Start browsing to see personalized insights!'],
@@ -332,12 +330,9 @@ export async function getAIProductivityInsights() {
                 dataQuality = 'limited';
             }
             
-            console.log('Data quality assessment:', dataQuality);
-            
             aiInsights.dataQuality = dataQuality || 'limited'; // Fallback to 'limited'
             aiInsights.dailyStats = analysis.dailyBreakdown;
             
-            console.log('Generated AI insights from real data with custom categories:', aiInsights);
             resolve(aiInsights);
         });
     });
@@ -355,8 +350,6 @@ function assessDataQuality(focusStats, focusHistory) {
             return acc + (Array.isArray(sessions) ? sessions.length : 0);
         }, 0);
     }
-    
-    console.log('Data quality metrics:', { totalTime, totalDomains, totalSessions });
     
     // Calculate data age safely
     let oldestSession = Date.now();
@@ -389,7 +382,6 @@ function assessDataQuality(focusStats, focusHistory) {
         quality = 'rich'; // Substantial data available
     }
     
-    console.log('Assessed quality:', quality);
     return quality;
 }
 

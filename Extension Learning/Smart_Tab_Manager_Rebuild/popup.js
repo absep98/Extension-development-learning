@@ -4,6 +4,12 @@ import { renderFavorites } from './utils/renderFavorites.js';
 import { clearSmartTabFavorites } from './utils/clearFavorites.js';
 import { initializeFocusModeUI, cleanExpiredBlocks } from './utils/focusMode.js';
 import { initializeAIInsightsUI, addAIInsightsStyles } from './utils/aiInsightsUI.js';
+// Import new utilities
+import './utils/performance.js';
+import './utils/common.js';
+import './utils/advanced-features.js';
+import './utils/security.js';
+import './utils/testing.js';
 // import { storeBookmarkedTabs } from './utils/storeBookmarkedTabs.js';
 
 let allTabs = [];
@@ -20,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("clearFavoritesBtn").addEventListener("click", () => {
         clearSmartTabFavorites().then(() => {
             renderFavorites();
-            alert("Favorites cleared!");
+            showNotification("Favorites cleared!", "success");
         });
     });
 
@@ -50,6 +56,117 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Advanced Features Event Listeners
+    const groupTabsBtn = document.getElementById("groupTabsBtn");
+    const exportDataBtn = document.getElementById("exportDataBtn");
+    const importDataBtn = document.getElementById("importDataBtn");
+    const importDataInput = document.getElementById("importDataInput");
+    const saveSessionBtn = document.getElementById("saveSessionBtn");
+
+    if (groupTabsBtn) {
+        groupTabsBtn.addEventListener("click", async () => {
+            if (window.TabOperations) {
+                groupTabsBtn.textContent = "🔄 Grouping...";
+                groupTabsBtn.disabled = true;
+                
+                const result = await TabOperations.groupByDomain();
+                
+                groupTabsBtn.textContent = `✅ Grouped ${result} domains`;
+                setTimeout(() => {
+                    groupTabsBtn.textContent = "👥 Group Tabs by Domain";
+                    groupTabsBtn.disabled = false;
+                }, 2000);
+            } else {
+                showNotification("Advanced features not loaded yet. Please try again.", "error");
+            }
+        });
+    }
+
+    if (exportDataBtn) {
+        exportDataBtn.addEventListener("click", async () => {
+            if (window.DataManager) {
+                exportDataBtn.textContent = "📤 Exporting...";
+                exportDataBtn.disabled = true;
+                
+                const result = await DataManager.exportData();
+                
+                if (result.success) {
+                    exportDataBtn.textContent = "✅ Exported!";
+                    setTimeout(() => {
+                        exportDataBtn.textContent = "📤 Export Data";
+                        exportDataBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    showNotification("Export failed: " + result.error, "error");
+                    exportDataBtn.textContent = "📤 Export Data";
+                    exportDataBtn.disabled = false;
+                }
+            } else {
+                showNotification("Advanced features not loaded yet. Please try again.", "error");
+            }
+        });
+    }
+
+    if (importDataBtn && importDataInput) {
+        importDataBtn.addEventListener("click", () => {
+            importDataInput.click();
+        });
+
+        importDataInput.addEventListener("change", async (event) => {
+            const file = event.target.files[0];
+            if (file && window.DataManager) {
+                importDataBtn.textContent = "📥 Importing...";
+                importDataBtn.disabled = true;
+                
+                const result = await DataManager.importData(file);
+                
+                if (result.success) {
+                    importDataBtn.textContent = "✅ Imported!";
+                    alert(`Successfully imported: ${result.imported.join(', ')}`);
+                    setTimeout(() => {
+                        importDataBtn.textContent = "📥 Import Data";
+                        importDataBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    alert("Import failed: " + result.error);
+                    importDataBtn.textContent = "📥 Import Data";
+                    importDataBtn.disabled = false;
+                }
+                
+                // Clear the file input
+                event.target.value = '';
+            }
+        });
+    }
+
+    if (saveSessionBtn) {
+        saveSessionBtn.addEventListener("click", async () => {
+            if (window.SessionManager) {
+                const sessionName = prompt("Enter session name:");
+                if (sessionName) {
+                    saveSessionBtn.textContent = "💾 Saving...";
+                    saveSessionBtn.disabled = true;
+                    
+                    const result = await SessionManager.saveSession(sessionName);
+                    
+                    if (result.success) {
+                        saveSessionBtn.textContent = "✅ Saved!";
+                        setTimeout(() => {
+                            saveSessionBtn.textContent = "💾 Save Session";
+                            saveSessionBtn.disabled = false;
+                        }, 2000);
+                    } else {
+                        alert("Save failed: " + result.error);
+                        saveSessionBtn.textContent = "💾 Save Session";
+                        saveSessionBtn.disabled = false;
+                    }
+                }
+            } else {
+                alert("Advanced features not loaded yet. Please try again.");
+            }
+        });
+    }
+
     // On load: set dropdown to saved sort
     chrome.storage.local.get("favoriteSortOption", (data) => {
         sortSelect.value = data.favoriteSortOption || "recent";
@@ -63,6 +180,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initialize AI Insights UI
     addAIInsightsStyles();
     initializeAIInsightsUI();
+    
+    // Initialize keyboard shortcuts if available
+    if (window.KeyboardShortcuts) {
+        KeyboardShortcuts.init();
+    }
 
     storeFavoritesBtn.addEventListener("click", async () => {
         const folderTitle = "Smart Tab Bookmarks";
@@ -245,5 +367,33 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     cleanExpiredBlocks();
-
 });
+
+// Simple notification function
+function showNotification(message, type) {
+    // Create or get notification element
+    let notificationEl = document.getElementById('popupNotification');
+    if (!notificationEl) {
+        notificationEl = document.createElement('div');
+        notificationEl.id = 'popupNotification';
+        notificationEl.style.cssText = `
+            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+            padding: 10px 15px; border-radius: 4px; z-index: 1000; font-weight: 500;
+            max-width: 300px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        `;
+        document.body.appendChild(notificationEl);
+    }
+    
+    // Set message and style based on type
+    notificationEl.textContent = message;
+    notificationEl.style.backgroundColor = type === 'error' ? '#dc3545' : '#28a745';
+    notificationEl.style.color = 'white';
+    notificationEl.style.display = 'block';
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+        if (notificationEl.parentNode) {
+            notificationEl.style.display = 'none';
+        }
+    }, 3000);
+}

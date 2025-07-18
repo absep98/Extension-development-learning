@@ -117,7 +117,7 @@ function createCategorySection(category, meta) {
             ${customDomains.map(domain => `
                 <div class="domain-tag custom">
                     <span>${domain}</span>
-                    <span class="remove-domain" onclick="removeDomain('${category}', '${domain}')">×</span>
+                    <span class="remove-domain" data-category="${category}" data-domain="${domain}">×</span>
                 </div>
             `).join('')}
         </div>
@@ -125,10 +125,33 @@ function createCategorySection(category, meta) {
         <div class="add-domain-form">
             <input type="text" class="add-domain-input" id="input-${category}" 
                    placeholder="Add domain (e.g., example.com)" 
-                   onkeypress="handleKeyPress(event, '${category}')">
-            <button class="add-domain-btn" onclick="addDomain('${category}')">+ Add</button>
+                   data-category="${category}">
+            <button class="add-domain-btn" data-category="${category}">+ Add</button>
         </div>
     `;
+    
+    // Add event listeners after creating the HTML
+    const addButton = section.querySelector('.add-domain-btn');
+    const input = section.querySelector('.add-domain-input');
+    const removeButtons = section.querySelectorAll('.remove-domain');
+    
+    // Add domain button click
+    addButton.addEventListener('click', () => addDomain(category));
+    
+    // Enter key in input
+    input.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            addDomain(category);
+        }
+    });
+    
+    // Remove domain buttons
+    removeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const domain = button.getAttribute('data-domain');
+            removeDomain(category, domain);
+        });
+    });
     
     return section;
 }
@@ -186,13 +209,6 @@ async function removeDomain(category, domain) {
     showStatus(`Removed ${domain} from ${CATEGORY_META[category].name}`, 'success');
 }
 
-// Handle Enter key in input
-function handleKeyPress(event, category) {
-    if (event.key === 'Enter') {
-        addDomain(category);
-    }
-}
-
 // Validate domain format
 function isValidDomain(domain) {
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.([a-zA-Z]{2,}|[a-zA-Z]{2,}\.[a-zA-Z]{2,})$/;
@@ -229,12 +245,21 @@ function renderSuggestions() {
                     </div>
                     <div>
                         <span style="margin-right: 10px; font-size: 12px;">→ ${CATEGORY_META[suggestedCategory].emoji} ${CATEGORY_META[suggestedCategory].name}</span>
-                        <button class="suggestion-btn" onclick="acceptSuggestion('${domain}', '${suggestedCategory}')">Add</button>
+                        <button class="suggestion-btn" data-domain="${domain}" data-category="${suggestedCategory}">Add</button>
                     </div>
                 </div>
             `).join('')}
         </div>
     `;
+    
+    // Add event listeners for suggestion buttons
+    container.querySelectorAll('.suggestion-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const domain = button.getAttribute('data-domain');
+            const category = button.getAttribute('data-category');
+            acceptSuggestion(domain, category);
+        });
+    });
 }
 
 // Get uncategorized domains from user's browsing data
@@ -312,13 +337,70 @@ async function acceptSuggestion(domain, category) {
 
 // Reset to defaults
 async function resetToDefaults() {
-    if (confirm('Are you sure you want to reset all custom categorizations? This cannot be undone.')) {
+    // Create a custom confirmation dialog instead of browser alert
+    const confirmed = await showConfirmDialog(
+        'Reset Categories', 
+        'Are you sure you want to reset all custom categorizations? This cannot be undone.'
+    );
+    
+    if (confirmed) {
         customCategories = {};
         await saveCustomCategories();
         renderCategories();
         renderSuggestions();
         showStatus('Reset to default categories', 'success');
     }
+}
+
+// Custom confirmation dialog
+function showConfirmDialog(title, message) {
+    return new Promise((resolve) => {
+        // Create modal backdrop
+        const backdrop = document.createElement('div');
+        backdrop.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 10000; display: flex;
+            align-items: center; justify-content: center;
+        `;
+        
+        // Create modal dialog
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white; padding: 20px; border-radius: 8px; max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); text-align: center;
+        `;
+        
+        modal.innerHTML = `
+            <h3 style="margin: 0 0 10px 0; color: #333;">${title}</h3>
+            <p style="margin: 0 0 20px 0; color: #666;">${message}</p>
+            <div>
+                <button id="confirmYes" style="background: #dc3545; color: white; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 4px; cursor: pointer;">Yes, Reset</button>
+                <button id="confirmNo" style="background: #6c757d; color: white; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 4px; cursor: pointer;">Cancel</button>
+            </div>
+        `;
+        
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        
+        // Add event listeners
+        document.getElementById('confirmYes').addEventListener('click', () => {
+            document.body.removeChild(backdrop);
+            resolve(true);
+        });
+        
+        document.getElementById('confirmNo').addEventListener('click', () => {
+            document.body.removeChild(backdrop);
+            resolve(false);
+        });
+        
+        // Close on backdrop click
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+                document.body.removeChild(backdrop);
+                resolve(false);
+            }
+        });
+    });
 }
 
 // Show status message
@@ -341,9 +423,3 @@ function formatTime(ms) {
     const remMin = minutes % 60;
     return `${hours}h ${remMin}m`;
 }
-
-// Make functions globally available
-window.addDomain = addDomain;
-window.removeDomain = removeDomain;
-window.handleKeyPress = handleKeyPress;
-window.acceptSuggestion = acceptSuggestion;

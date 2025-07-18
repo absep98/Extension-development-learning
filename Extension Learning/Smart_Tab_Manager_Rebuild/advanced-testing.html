@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Features Testing - Smart Tab Manager</title>
+    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="enhanced-ui.css">
+    <style>
+        body {
+            width: 700px;
+            min-height: 600px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .test-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+        
+        .test-button.secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+        
+        .test-button.danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+        
+        .test-result {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .feature-demo {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success { background: #4CAF50; }
+        .status-warning { background: #FF9800; }
+        .status-error { background: #f44336; }
+        
+        .keyboard-demo {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .keyboard-combo {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        .file-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px dashed #fff;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .session-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .progress-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            height: 8px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; margin-bottom: 30px;">🧪 Advanced Features Testing Lab</h1>
+
+    <!-- Tab Operations Testing -->
+    <div class="test-section">
+        <div class="test-header">
+            <span>🔧</span>
+            <span>Tab Operations</span>
+            <span class="status-indicator status-warning"></span>
+        </div>
+        <div class="feature-demo">
+            <button class="test-button" data-action="testGroupTabs">📂 Group Tabs by Domain</button>
+            <button class="test-button secondary" data-action="testDuplicateTab">📋 Duplicate Current Tab</button>
+            <button class="test-button secondary" data-action="testMoveToNewWindow">🪟 Move Tab to New Window</button>
+            <button class="test-button" data-action="testGetTabCount">📊 Count Current Tabs</button>
+        </div>
+        <div id="tabOperationsResult" class="test-result"></div>
+    </div>
+
+    <!-- Keyboard Shortcuts Testing -->
+    <div class="test-section">
+        <div class="test-header">
+            <span>⌨️</span>
+            <span>Keyboard Shortcuts</span>
+            <span class="status-indicator status-success"></span>
+        </div>
+        <div class="keyboard-demo">
+            <p><strong>Try these keyboard shortcuts:</strong></p>
+            <div>
+                <span class="keyboard-combo">Ctrl + K</span> Focus Search Box<br>
+                <span class="keyboard-combo">Ctrl + G</span> Group Tabs by Domain<br>
+                <span class="keyboard-combo">Ctrl + E</span> Export Data<br>
+                <span class="keyboard-combo">Escape</span> Clear Search<br>
+                <span class="keyboard-combo">↑ ↓</span> Navigate Tab List
+            </div>
+        </div>
+        <button class="test-button" data-action="testKeyboardShortcuts">🧪 Test Keyboard Events</button>
+        <div id="keyboardResult" class="test-result"></div>
+    </div>
+
+    <!-- Data Management Testing -->
+    <div class="test-section">
+        <div class="test-header">
+            <span>💾</span>
+            <span>Data Export/Import</span>
+            <span class="status-indicator status-success"></span>
+        </div>
+        <div class="feature-demo">
+            <button class="test-button" data-action="testExportData">📤 Export Extension Data</button>
+            <button class="test-button secondary" data-action="showImportInterface">📥 Show Import Interface</button>
+            <button class="test-button" data-action="testDataValidation">✅ Validate Current Data</button>
+        </div>
+        
+        <div id="importInterface" style="display: none;">
+            <div class="file-input" data-action="fileInputTrigger">
+                📁 Click to select backup file
+                <input type="file" id="fileInput" accept=".json" style="display: none;">
+            </div>
+        </div>
+        
+        <div id="dataManagementResult" class="test-result"></div>
+    </div>
+
+    <!-- Session Management Testing -->
+    <div class="test-section">
+        <div class="test-header">
+            <span>💼</span>
+            <span>Session Management</span>
+            <span class="status-indicator status-warning"></span>
+        </div>
+        <div class="feature-demo">
+            <input type="text" id="sessionNameInput" placeholder="Session name..." 
+                   style="padding: 8px; border-radius: 4px; border: none; margin-right: 10px;">
+            <button class="test-button" data-action="testSaveSession">💾 Save Current Session</button>
+            <button class="test-button secondary" data-action="loadSavedSessions">📋 Load Saved Sessions</button>
+            <button class="test-button danger" data-action="clearAllSessions">🗑️ Clear All Sessions</button>
+        </div>
+        
+        <div id="sessionsList" class="session-list" style="display: none;"></div>
+        <div id="sessionResult" class="test-result"></div>
+    </div>
+
+    <!-- Performance Testing -->
+    <div class="test-section">
+        <div class="test-header">
+            <span>⚡</span>
+            <span>Performance & Memory</span>
+            <span class="status-indicator status-success"></span>
+        </div>
+        <div class="feature-demo">
+            <button class="test-button" data-action="testPerformanceMonitoring">📊 Check Performance</button>
+            <button class="test-button secondary" data-action="testMemoryUsage">🧠 Memory Usage</button>
+            <button class="test-button" data-action="testStorageOperations">💾 Storage Speed Test</button>
+            <button class="test-button secondary" data-action="runStressTest">🔥 Stress Test</button>
+        </div>
+        <div class="progress-container">
+            <div id="performanceProgress" class="progress-bar"></div>
+        </div>
+        <div id="performanceResult" class="test-result"></div>
+    </div>
+
+    <!-- Security Testing -->
+    <div class="test-section">
+        <div class="test-header">
+            <span>🔒</span>
+            <span>Security & Privacy</span>
+            <span class="status-indicator status-success"></span>
+        </div>
+        <div class="feature-demo">
+            <button class="test-button" data-action="testDataAnonymization">🕵️ Test Data Anonymization</button>
+            <button class="test-button secondary" data-action="testInputSanitization">🛡️ Test Input Sanitization</button>
+            <button class="test-button" data-action="testPrivacyReport">📋 Generate Privacy Report</button>
+            <button class="test-button danger" data-action="testDataPurging">🗑️ Test Data Purging</button>
+        </div>
+        <div id="securityResult" class="test-result"></div>
+    </div>
+
+    <!-- Automated Test Suite -->
+    <div class="test-section">
+        <div class="test-header">
+            <span>🤖</span>
+            <span>Automated Test Suite</span>
+            <span class="status-indicator status-success"></span>
+        </div>
+        <div class="feature-demo">
+            <button class="test-button" data-action="runAllTests">🧪 Run All Tests</button>
+            <button class="test-button secondary" data-action="runQuickTests">⚡ Quick Test Suite</button>
+            <button class="test-button" data-action="runSecurityTests">🔒 Security Tests Only</button>
+            <button class="test-button secondary" data-action="generateTestReport">📊 Generate Test Report</button>
+        </div>
+        <div class="progress-container">
+            <div id="testProgress" class="progress-bar"></div>
+        </div>
+        <div id="testSuiteResult" class="test-result"></div>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px; opacity: 0.8;">
+        <p>🧪 Advanced Features Testing Lab - Smart Tab Manager Pro</p>
+        <p style="font-size: 12px;">Use this interface to test all advanced features before deployment</p>
+    </div>
+
+    <!-- Load Scripts -->
+    <script src="utils/common.js"></script>
+    <script src="utils/advanced-features.js"></script>
+    <script src="utils/security.js"></script>
+    <script src="utils/performance.js"></script>
+    <script src="utils/testing.js"></script>
+    <script src="advanced-testing.js"></script>
+</body>
+</html>

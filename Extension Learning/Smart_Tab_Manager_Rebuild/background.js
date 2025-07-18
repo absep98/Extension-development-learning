@@ -9,12 +9,10 @@ chrome.runtime.onInstalled.addListener(initializeTracking);
 initializeTracking();
 
 function initializeTracking() {
-  console.log("🚀 Initializing time tracking...");
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]) {
       currentActiveTabId = tabs[0].id;
       activeStartTime = Date.now();
-      console.log(`▶️ Started tracking tab ${tabs[0].id}: ${tabs[0].url} at ${new Date().toLocaleTimeString()}`);
     }
   });
   
@@ -29,12 +27,27 @@ function initializeTracking() {
       
       // Only backup if we have significant time (>10 seconds)
       if (currentDuration > 10000) {
-        console.log(`💾 Periodic backup: ${Math.round(currentDuration/1000)}s for tab ${currentActiveTabId}`);
         recordFocusDuration(currentActiveTabId, currentDuration);
         activeStartTime = now; // Reset timer after backup
       }
     }
   }, 30000); // Every 30 seconds
+  
+  // Set up periodic cleanup of expired blocks (every 10 seconds for responsive blocking)
+  setInterval(() => {
+    chrome.storage.local.get({ blockedDomains: [], focusModeActive: false }, (data) => {
+      if (data.focusModeActive && data.blockedDomains.length > 0) {
+        const now = Date.now();
+        const hasExpired = data.blockedDomains.some(entry => 
+          entry.unblockUntil && entry.unblockUntil <= now
+        );
+        
+        if (hasExpired) {
+          updateDeclarativeNetRequestRules(); // This will clean and update
+        }
+      }
+    });
+  }, 10000); // Every 10 seconds for faster response
 }
 
 // Focus tracking: tab switched
@@ -42,18 +55,10 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
   const now = Date.now();
   if (currentActiveTabId && activeStartTime) {
     const duration = now - activeStartTime;
-    console.log(`🔄 Tab switched, recording ${Math.round(duration/1000)}s for tab ${currentActiveTabId}`);
     recordFocusDuration(currentActiveTabId, duration);
   }
   currentActiveTabId = tabId;
   activeStartTime = now;
-  
-  // Get the URL for logging
-  chrome.tabs.get(tabId, (tab) => {
-    if (tab) {
-      console.log(`▶️ Now tracking tab ${tabId}: ${tab.url}`);
-    }
-  });
 });
 
 // Focus tracking: window focus changed
@@ -64,28 +69,23 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     // Browser lost focus - record current session but don't start new one
     if (currentActiveTabId && activeStartTime) {
       const duration = now - activeStartTime;
-      console.log(`🔸 Browser lost focus, recording ${Math.round(duration/1000)}s for tab ${currentActiveTabId}`);
       recordFocusDuration(currentActiveTabId, duration);
       activeStartTime = null; // Pause tracking
     }
-    console.log("⏸️ Paused tracking - browser lost focus");
     return;
   }
 
-  console.log("🔄 Browser gained focus, switching to active tab");
   chrome.tabs.query({ active: true, windowId }, (tabs) => {
     const tab = tabs[0];
     if (!tab) return;
 
     if (currentActiveTabId && activeStartTime) {
       const duration = now - activeStartTime;
-      console.log(`🔸 Window focus changed, recording ${Math.round(duration/1000)}s for tab ${currentActiveTabId}`);
       recordFocusDuration(currentActiveTabId, duration);
     }
 
     currentActiveTabId = tab.id;
     activeStartTime = now;
-    console.log(`▶️ Resumed tracking for tab ${tab.id}: ${tab.url}`);
   });
 });
 
@@ -113,16 +113,27 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
         const isBlocked = blocked.some(entry => {
           const domainMatch = currentDomain.endsWith(entry.domain);
+          
+          if (!domainMatch) return false;
 
-          const isPermanentBlock = !entry.unblockUntil;
-          const isExpiredUnblock = entry.unblockUntil && now > entry.unblockUntil;
-
-          return domainMatch && (isPermanentBlock || isExpiredUnblock);
+          // If it's a permanent block (no unblockUntil), block it
+          if (!entry.unblockUntil) return true;
+          
+          // If it's a temporary block that hasn't expired yet, DON'T block it
+          if (entry.unblockUntil && now < entry.unblockUntil) return false;
+          
+          // If it's a temporary block that has expired, block it
+          return true;
         });
 
         if (isBlocked) {
           console.log(`🚫 Blocking ${currentDomain} immediately`);
           chrome.tabs.update(tabId, { url: chrome.runtime.getURL("blocked.html") });
+          
+          // Also trigger rule update to ensure declarativeNetRequest is current
+          updateDeclarativeNetRequestRules();
+        } else {
+          console.log(`✅ Allowing ${currentDomain} - not blocked or within unblock period`);
         }
       } catch (err) {
         console.warn("Invalid tab URL: ", tab.url);
@@ -216,41 +227,77 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Update blocking rules using declarativeNetRequest API
 function updateDeclarativeNetRequestRules() {
-  chrome.storage.local.get(["focusModeActive", "blockedDomains"], (data) => {
-    if (!data.focusModeActive || !data.blockedDomains?.length) {
-      // Clear all rules if focus mode is off or no blocked domains
-      chrome.declarativeNetRequest.updateDynamicRules({
-        removeRuleIds: Array.from({length: 1000}, (_, i) => i + 1) // Remove rules 1-1000
-      });
-      return;
-    }
-
-    const now = Date.now();
-    const activeBlocks = data.blockedDomains.filter(entry => {
-      const isPermanentBlock = !entry.unblockUntil;
-      const isActiveTemporaryBlock = entry.unblockUntil && now < entry.unblockUntil;
-      return isPermanentBlock || isActiveTemporaryBlock;
-    });
-
-    const rules = activeBlocks.map((entry, index) => ({
-      id: index + 1,
-      priority: 1,
-      action: {
-        type: "redirect",
-        redirect: { url: chrome.runtime.getURL("blocked.html") }
-      },
-      condition: {
-        urlFilter: `*://*.${entry.domain}/*`,
-        resourceTypes: ["main_frame"]
+  // First clean expired blocks
+  cleanExpiredBlocksInBackground(() => {
+    chrome.storage.local.get(["focusModeActive", "blockedDomains"], (data) => {
+      if (!data.focusModeActive || !data.blockedDomains?.length) {
+        // Clear all rules if focus mode is off or no blocked domains
+        chrome.declarativeNetRequest.updateDynamicRules({
+          removeRuleIds: Array.from({length: 1000}, (_, i) => i + 1) // Remove rules 1-1000
+        });
+        return;
       }
-    }));
 
-    // Clear existing rules and add new ones
-    chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: Array.from({length: 1000}, (_, i) => i + 1),
-      addRules: rules
-    }, () => {
-      console.log(`🚫 Updated blocking rules for ${rules.length} domains`);
+      const now = Date.now();
+      const activeBlocks = data.blockedDomains.filter(entry => {
+        // Only block permanent blocks OR expired temporary blocks
+        const isPermanentBlock = !entry.unblockUntil;
+        const isExpiredTemporaryBlock = entry.unblockUntil && now >= entry.unblockUntil;
+        return isPermanentBlock || isExpiredTemporaryBlock;
+      });
+
+      const rules = activeBlocks.map((entry, index) => ({
+        id: index + 1,
+        priority: 1,
+        action: {
+          type: "redirect",
+          redirect: { url: chrome.runtime.getURL("blocked.html") }
+        },
+        condition: {
+          urlFilter: `*://*.${entry.domain}/*`,
+          resourceTypes: ["main_frame"]
+        }
+      }));
+
+      // Clear existing rules and add new ones
+      chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: Array.from({length: 1000}, (_, i) => i + 1),
+        addRules: rules
+      }, () => {
+        console.log(`🚫 Updated blocking rules for ${rules.length} domains`);
+        console.log(`📋 Active blocks:`, activeBlocks.map(b => `${b.domain}${b.unblockUntil ? ` (blocked after ${new Date(b.unblockUntil).toLocaleTimeString()})` : ' (permanently blocked)'}`));
+      });
     });
+  });
+}
+
+// Clean expired blocks in background (helper function)
+function cleanExpiredBlocksInBackground(callback = () => {}) {
+  chrome.storage.local.get({ blockedDomains: [] }, (data) => {
+    const now = Date.now();
+
+    // Convert expired temporary unblocks to permanent blocks
+    const updated = data.blockedDomains.map(entry => {
+      // If it's a temporary unblock that has expired, make it a permanent block
+      if (entry.unblockUntil && entry.unblockUntil <= now) {
+        return { domain: entry.domain, unblockUntil: null }; // Remove unblockUntil to make it permanent
+      }
+      return entry; // Keep as is
+    });
+
+    // Only update storage if something changed
+    const hasChanges = updated.some((entry, index) => 
+      JSON.stringify(entry) !== JSON.stringify(data.blockedDomains[index])
+    );
+
+    if (hasChanges) {
+      chrome.storage.local.set({ blockedDomains: updated }, callback);
+      const expiredCount = updated.filter((entry, index) => 
+        !entry.unblockUntil && data.blockedDomains[index].unblockUntil
+      ).length;
+      console.log(`🔄 Converted ${expiredCount} expired unblocks to permanent blocks`);
+    } else {
+      callback();
+    }
   });
 }

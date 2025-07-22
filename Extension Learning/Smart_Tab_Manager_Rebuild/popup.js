@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const searchInput = document.getElementById('searchInput');
     const favoriteList = document.getElementById('favoriteList');
     const toggleAllTabs = document.getElementById("toggleAllTabs");
+    const advancedFeaturesHeader = document.getElementById("advancedFeaturesHeader");
     const storeFavoritesBtn = document.getElementById('storeFavoritesBtn');
     const sortSelect = document.getElementById("sortFavorites");
     const settingsBtn = document.getElementById("settingsBtn");
@@ -31,8 +32,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     toggleAllTabs.addEventListener("click", () => {
-        tabList.classList.toggle("hidden");
-        toggleAllTabs.classList.toggle("collapsed");
+        const isVisible = tabList.style.display !== "none";
+        
+        tabList.style.display = isVisible ? "none" : "block";
+        toggleAllTabs.textContent = isVisible 
+            ? "📂 All Tabs ⯈" 
+            : "📂 All Tabs ⯆";
+    });
+
+    // Advanced Features toggle functionality
+    advancedFeaturesHeader.addEventListener("click", () => {
+        const advancedFeaturesSection = document.getElementById("advancedFeaturesSection");
+        const isVisible = advancedFeaturesSection.style.display !== "none";
+        
+        advancedFeaturesSection.style.display = isVisible ? "none" : "block";
+        advancedFeaturesHeader.textContent = isVisible 
+            ? "🚀 Advanced Features ⯈" 
+            : "🚀 Advanced Features ⯆";
     });
 
     sortSelect.addEventListener("change", () => {
@@ -122,13 +138,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 if (result.success) {
                     importDataBtn.textContent = "✅ Imported!";
-                    alert(`Successfully imported: ${result.imported.join(', ')}`);
+                    showNotification(`Successfully imported: ${result.imported.join(', ')}`, "success");
                     setTimeout(() => {
                         importDataBtn.textContent = "📥 Import Data";
                         importDataBtn.disabled = false;
                     }, 2000);
                 } else {
-                    alert("Import failed: " + result.error);
+                    showNotification("Import failed: " + result.error, "error");
                     importDataBtn.textContent = "📥 Import Data";
                     importDataBtn.disabled = false;
                 }
@@ -142,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (saveSessionBtn) {
         saveSessionBtn.addEventListener("click", async () => {
             if (window.SessionManager) {
-                const sessionName = prompt("Enter session name:");
+                const sessionName = await showPromptDialog("Save Session", "Enter session name:");
                 if (sessionName) {
                     saveSessionBtn.textContent = "💾 Saving...";
                     saveSessionBtn.disabled = true;
@@ -156,13 +172,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             saveSessionBtn.disabled = false;
                         }, 2000);
                     } else {
-                        alert("Save failed: " + result.error);
+                        showNotification("Save failed: " + result.error, "error");
                         saveSessionBtn.textContent = "💾 Save Session";
                         saveSessionBtn.disabled = false;
                     }
                 }
             } else {
-                alert("Advanced features not loaded yet. Please try again.");
+                showNotification("Advanced features not loaded yet. Please try again.", "error");
             }
         });
     }
@@ -193,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (folder) {
                 syncFavoritesFromBookmarks({ shouldRender: true });         // ✅ then render
             } else {
-                alert("No Smart Tab Bookmarks folder found!!");
+                showNotification("No Smart Tab Bookmarks folder found!", "error");
             }
         });
     });
@@ -322,7 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const tabId = parseInt(event.target.dataset.id);
                         const tab = tabsToRender.find(t => t.id == tabId);
                         if (!tab) {
-                            alert("Tab not found or might have been closed.");
+                            showNotification("Tab not found or might have been closed.", "error");
                             return;
                         }
                         chrome.tabs.update(tabId, { pinned: !tab.pinned }, () => {
@@ -338,7 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const tabId = parseInt(event.target.dataset.id);
                         const tab = tabsToRender.find(t => t.id == tabId);
                         if (!tab) {
-                            alert("Tab not found or might have been closed.");
+                            showNotification("Tab not found or might have been closed.", "error");
                             return;
                         }
                         const folderTitle = "Smart Tab Bookmarks";
@@ -369,8 +385,8 @@ document.addEventListener("DOMContentLoaded", () => {
     cleanExpiredBlocks();
 });
 
-// Simple notification function
-function showNotification(message, type) {
+// Show notification function for better UX
+function showNotification(message, type = 'info') {
     // Create or get notification element
     let notificationEl = document.getElementById('popupNotification');
     if (!notificationEl) {
@@ -379,14 +395,14 @@ function showNotification(message, type) {
         notificationEl.style.cssText = `
             position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
             padding: 10px 15px; border-radius: 4px; z-index: 1000; font-weight: 500;
-            max-width: 300px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            max-width: 300px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); text-align: center;
         `;
         document.body.appendChild(notificationEl);
     }
     
     // Set message and style based on type
     notificationEl.textContent = message;
-    notificationEl.style.backgroundColor = type === 'error' ? '#dc3545' : '#28a745';
+    notificationEl.style.backgroundColor = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff';
     notificationEl.style.color = 'white';
     notificationEl.style.display = 'block';
     
@@ -397,3 +413,69 @@ function showNotification(message, type) {
         }
     }, 3000);
 }
+
+// Custom prompt dialog
+function showPromptDialog(title, message) {
+    return new Promise((resolve) => {
+        // Create modal backdrop
+        const backdrop = document.createElement('div');
+        backdrop.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 10000; display: flex;
+            align-items: center; justify-content: center;
+        `;
+        
+        // Create modal dialog
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white; padding: 20px; border-radius: 8px; max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); text-align: center;
+        `;
+        
+        modal.innerHTML = `
+            <h3 style="margin: 0 0 10px 0; color: #333;">${title}</h3>
+            <p style="margin: 0 0 15px 0; color: #666;">${message}</p>
+            <input type="text" id="promptInput" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;">
+            <div>
+                <button id="promptOk" style="background: #007bff; color: white; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 4px; cursor: pointer;">OK</button>
+                <button id="promptCancel" style="background: #6c757d; color: white; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 4px; cursor: pointer;">Cancel</button>
+            </div>
+        `;
+        
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        
+        const input = document.getElementById('promptInput');
+        input.focus();
+        
+        // Add event listeners
+        document.getElementById('promptOk').addEventListener('click', () => {
+            const value = input.value.trim();
+            document.body.removeChild(backdrop);
+            resolve(value || null);
+        });
+        
+        document.getElementById('promptCancel').addEventListener('click', () => {
+            document.body.removeChild(backdrop);
+            resolve(null);
+        });
+        
+        // Handle Enter key
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const value = input.value.trim();
+                document.body.removeChild(backdrop);
+                resolve(value || null);
+            }
+        });
+        
+        // Close on backdrop click
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+                document.body.removeChild(backdrop);
+                resolve(null);
+            }
+        });
+    });
+}
+

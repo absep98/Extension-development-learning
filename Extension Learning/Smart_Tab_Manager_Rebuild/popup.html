@@ -34,32 +34,10 @@
         </button>
     </div>
     
-    <!-- Advanced Features Test Section -->
-    <div style="margin-bottom: 14px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
-        <h4 style="margin: 0 0 8px 0; font-size: 14px;">🚀 Advanced Features</h4>
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-            <button id="groupTabsBtn" style="padding: 6px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 12px;">
-                👥 Group Tabs by Domain
-            </button>
-            <div style="display: flex; gap: 4px;">
-                <button id="exportDataBtn" style="flex: 1; padding: 6px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-size: 12px;">
-                    📤 Export Data
-                </button>
-                <button id="saveSessionBtn" style="flex: 1; padding: 6px; background: #ffc107; color: #212529; border: none; border-radius: 4px; font-size: 12px;">
-                    💾 Save Session
-                </button>
-            </div>
-            <input type="file" id="importDataInput" accept=".json" style="display: none;">
-            <button id="importDataBtn" style="padding: 6px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px;">
-                📥 Import Data
-            </button>
-        </div>
-    </div>
-    
     <ul id="favoriteList"></ul>
 
-    <h3 id="toggleAllTabs" class="toggle-header">📂 All Tabs</h3>
-    <ul id="tabList" class="tab-list hidden"></ul>
+    <h3 id="toggleAllTabs" style="cursor: pointer;">📂 All Tabs ⯈</h3>
+    <ul id="tabList" class="tab-list" style="display: none;"></ul>
 
     <h3 id="focusToggleHeader" style="cursor: pointer;">🔒 Focus Mode ⯈</h3>
 
@@ -104,6 +82,29 @@
         <div id="recommendationsContainer"></div>
         <div id="categoryBreakdownContainer"></div>
         <button id="refreshInsightsBtn">🔄 Refresh Insights</button>
+    </div>
+    
+    <!-- Advanced Features Section -->
+    <h3 id="advancedFeaturesHeader" style="cursor: pointer;">🚀 Advanced Features ⯈</h3>
+    
+    <div id="advancedFeaturesSection" style="display: none; margin-bottom: 14px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button id="groupTabsBtn" style="padding: 6px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 12px;">
+                👥 Group Tabs by Domain
+            </button>
+            <div style="display: flex; gap: 4px;">
+                <button id="exportDataBtn" style="flex: 1; padding: 6px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-size: 12px;">
+                    📤 Export Data
+                </button>
+                <button id="saveSessionBtn" style="flex: 1; padding: 6px; background: #ffc107; color: #212529; border: none; border-radius: 4px; font-size: 12px;">
+                    💾 Save Session
+                </button>
+            </div>
+            <input type="file" id="importDataInput" accept=".json" style="display: none;">
+            <button id="importDataBtn" style="padding: 6px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px;">
+                📥 Import Data
+            </button>
+        </div>
     </div>
 
     <script type="module" src="popup.js"></script>

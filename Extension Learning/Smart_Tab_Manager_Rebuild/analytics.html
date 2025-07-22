@@ -52,15 +52,21 @@
     <h2>📊 Tab Usage Analytics</h2>
 
     <div class="chart-container">
-        <h3>🧭 Time Spent per Domain (Bar)</h3>
+        <h3>📅 Daily Usage (Last 24 Hours)</h3>
         <canvas id="domainChart"></canvas>
     </div>
 
     <div class="chart-container">
-        <h3>🏆 Top 5 Domains (This Week)</h3>
+        <h3>🏆 Top 5 Domains</h3>
         <div class="flex-charts">
-            <canvas id="topSitesChart"></canvas>
-            <canvas id="weeklyTopSitesChart"></canvas>
+            <div style="text-align: center;">
+                <h4 style="margin-bottom: 10px; color: #666;">📊 All Time</h4>
+                <canvas id="topSitesChart"></canvas>
+            </div>
+            <div style="text-align: center;">
+                <h4 style="margin-bottom: 10px; color: #666;">📅 This Week</h4>
+                <canvas id="weeklyTopSitesChart"></canvas>
+            </div>
         </div>
     </div>
 

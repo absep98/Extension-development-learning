@@ -24,12 +24,38 @@ function formatDuration(ms) {
 function renderAnalyticsCharts() {
     chrome.runtime.sendMessage({ type: "flushFocusTime" }, () => {
         chrome.storage.local.get(["focusStats", "focusHistory"], ({ focusStats = {}, focusHistory = {} }) => {
-            const labels = Object.keys(focusStats);
-            const values = Object.values(focusStats);
-            const formattedValues = values.map(formatDuration);
+            
+            // Calculate DAILY data (last 24 hours) from focusHistory
+            const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+            const dailyTotals = {};
+            
+            for (const [domain, entries] of Object.entries(focusHistory)) {
+                for (const { timestamp, duration } of entries) {
+                    if (timestamp >= dayAgo) {
+                        dailyTotals[domain] = (dailyTotals[domain] || 0) + duration;
+                    }
+                }
+            }
+            
+            // Calculate WEEKLY data (last 7 days) from focusHistory  
+            const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            const weeklyTotals = {};
+            
+            for (const [domain, entries] of Object.entries(focusHistory)) {
+                for (const { timestamp, duration } of entries) {
+                    if (timestamp >= weekAgo) {
+                        weeklyTotals[domain] = (weeklyTotals[domain] || 0) + duration;
+                    }
+                }
+            }
+
+            // Prepare DAILY data for bar chart
+            const dailyLabels = Object.keys(dailyTotals);
+            const dailyValues = Object.values(dailyTotals);
+            const dailyFormattedValues = dailyValues.map(formatDuration);
 
             // Handle empty state
-            if (labels.length === 0) {
+            if (dailyLabels.length === 0 && Object.keys(focusStats).length === 0) {
                 document.getElementById("domainChart").style.display = "none";
                 document.getElementById("topSitesChart").style.display = "none";
                 document.getElementById("weeklyTopSitesChart").style.display = "none";
@@ -62,16 +88,16 @@ function renderAnalyticsCharts() {
             if (pieChart) pieChart.destroy();
             if (weeklyChart) weeklyChart.destroy();
 
-            // ---- Bar Chart ----
+            // ---- DAILY Bar Chart (Last 24 Hours) ----
             const barCtx = document.getElementById("domainChart").getContext("2d");
             barChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
-                    labels,
+                    labels: dailyLabels,
                     datasets: [{
-                        label: 'Time Spent per Domain',
-                        data: values,
-                        backgroundColor: labels.map((_, i) => barColors[i % barColors.length])
+                        label: 'Time Spent Today (Last 24 Hours)',
+                        data: dailyValues,
+                        backgroundColor: dailyLabels.map((_, i) => barColors[i % barColors.length])
                     }]
                 },
                 options: {
@@ -87,7 +113,7 @@ function renderAnalyticsCharts() {
                             callbacks: {
                                 label: (context) => {
                                     const index = context.dataIndex;
-                                    return ` ${formattedValues[index]}`;
+                                    return ` ${dailyFormattedValues[index]}`;
                                 }
                             }
                         }
@@ -95,14 +121,18 @@ function renderAnalyticsCharts() {
                 }
             });
 
-            // ---- Pie Chart ----
-            const sorted = labels
-                .map((domain, i) => ({ domain, time: values[i] }))
+            // ---- ALL-TIME Pie Chart (Top 5) ----
+            // Use cumulative focusStats for all-time top domains
+            const allTimeLabels = Object.keys(focusStats);
+            const allTimeValues = Object.values(focusStats);
+            
+            const sortedAllTime = allTimeLabels
+                .map((domain, i) => ({ domain, time: allTimeValues[i] }))
                 .sort((a, b) => b.time - a.time)
                 .slice(0, 5);
 
-            const pieLabels = sorted.map(d => d.domain);
-            const pieData = sorted.map(d => d.time);
+            const pieLabels = sortedAllTime.map(d => d.domain);
+            const pieData = sortedAllTime.map(d => d.time);
 
             const pieCtx = document.getElementById("topSitesChart").getContext("2d");
             pieChart = new Chart(pieCtx, {
@@ -126,18 +156,7 @@ function renderAnalyticsCharts() {
                 }
             });
 
-            // ---- Weekly Pie Chart ----
-            const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-            const weeklyTotals = {};
-
-            for (const [domain, entries] of Object.entries(focusHistory)) {
-                for (const { timestamp, duration } of entries) {
-                    if (timestamp >= weekAgo) {
-                        weeklyTotals[domain] = (weeklyTotals[domain] || 0) + duration;
-                    }
-                }
-            }
-
+            // ---- WEEKLY Pie Chart (Top 5 This Week) ----
             const sortedWeekly = Object.entries(weeklyTotals)
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 5);
@@ -195,7 +214,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (barChart) barChart.destroy();
                 if (pieChart) pieChart.destroy();
                 if (weeklyChart) weeklyChart.destroy();
-                alert("Analytics reset!");
+                
+                // Show success message instead of alert
+                resetBtn.textContent = "✅ Reset Complete!";
+                resetBtn.style.backgroundColor = "#28a745";
+                resetBtn.style.color = "white";
+                
+                setTimeout(() => {
+                    resetBtn.textContent = "🔄 Reset Analytics";
+                    resetBtn.style.backgroundColor = "";
+                    resetBtn.style.color = "";
+                    renderAnalyticsCharts(); // Refresh to show empty state
+                }, 2000);
             });
         });
     }
